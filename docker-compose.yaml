@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    volumes:
+      - ./app:/app
+      - ./logs:/var/log/beyblade
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=beyblade_user
+      - DB_PASSWORD=Kill!em!All
+      - DB_NAME=beyblade_db
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 25525286
+      MYSQL_USER: beyblade_user
+      MYSQL_PASSWORD: Kill!em!All
+      MYSQL_DATABASE: beyblade_db
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db_init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"  # Expose port 80 for HTTP
+      - "443:443" # Expose port 443 for HTTPS (if you configure SSL)
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d # Mount Nginx configuration
+      - ./nginx/certs:/etc/nginx/certs #Mount certificates if you use SSL
+      - ./static:/var/www/html #Mount location for static files
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /Docker/Beyblade/db_data
