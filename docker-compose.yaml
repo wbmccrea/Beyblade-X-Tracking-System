@@ -1,54 +1,43 @@
 services:
-  web:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
-    volumes:
-      - ./app:/app
-      - ./logs:/var/log/beyblade
-    depends_on:
-      - db
-    environment:
-      - DB_HOST=db
-      - DB_USER=beyblade_user
-      - DB_PASSWORD=Sample_DB_Password
-      - DB_NAME=beyblade_db
-    restart: unless-stopped
-    ports:
-      - "5000:5000" # Expose the Flask port for local development (optional)
-
   db:
     image: mariadb:10.11
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: Sample_root_Password
-      MYSQL_USER: beyblade_user
-      MYSQL_PASSWORD: Sample_DB_Password
-      MYSQL_DATABASE: beyblade_db
-    volumes:
-      - ./db_data:/var/lib/mysql
-
-  nginx:
-    image: nginx:latest
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-Sample_root_password}
+      MYSQL_USER: ${DB_USER:-beyblade_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-Sample_DB_Password}
+      MYSQL_DATABASE: ${DB_NAME:-beyblade_db}
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/certs:/etc/nginx/certs
-      - ./static:/var/www/html
-    depends_on:
-      - web
-    restart: unless-stopped
+      - "3306:3306"
+    command: --init-file /docker-entrypoint-initdb.d/init.sql
+    volumes: # Only ONE volumes section
+      - ./db_init:/docker-entrypoint-initdb.d # Bind mount for init script
+      - ./db_data:/var/lib/mysql # Bind mount for database data
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     restart: unless-stopped
     ports:
-      - "8080:80" # Expose phpMyAdmin on port 8080
+      - "8080:80"
     environment:
-      PMA_HOST: db # Connect to the 'db' service
-      MYSQL_ROOT_PASSWORD: Sample_root_Password # Use the same root password as your db service
-      UPLOAD_LIMIT: 100M #Optional, Increase upload limit if needed
+      PMA_HOST: db
+      UPLOAD_LIMIT: 100M
     depends_on:
       - db
+
+  web:
+    build: ./app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER:-beyblade_user}
+      DB_PASSWORD: ${DB_PASSWORD:-Sample_DB_Password}
+      DB_NAME: ${DB_NAME:-beyblade_db}
+    volumes:
+      - ./app:/app
+      - ./app/static:/app/static
+      - ./app/templates:/app/templates
