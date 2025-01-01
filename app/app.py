@@ -9,7 +9,7 @@ app = Flask(__name__)
 db_config = {
     "user": "beyblade_user",
     "password": "Sample_DB_Passowrd",
-    "host": "your_host",
+    "host": "db",
     "database": "beyblade_db"
 }
 
