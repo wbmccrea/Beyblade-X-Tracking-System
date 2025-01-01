@@ -48,7 +48,7 @@ services:
       - "8080:80" # Expose phpMyAdmin on port 8080
     environment:
       PMA_HOST: db # Connect to the 'db' service
-      MYSQL_ROOT_PASSWORD: 25525286 # Use the same root password as your db service
+      MYSQL_ROOT_PASSWORD: Sample_root_Password # Use the same root password as your db service
       UPLOAD_LIMIT: 100M #Optional, Increase upload limit if needed
     depends_on:
       - db
