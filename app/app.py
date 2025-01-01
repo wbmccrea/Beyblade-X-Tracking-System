@@ -7,10 +7,10 @@ app = Flask(__name__)
 
 # Database configuration (replace with your credentials)
 db_config = {
-    "user": "your_username",
-    "password": "your_password",
+    "user": "beyblade_user",
+    "password": "Sample_DB_Passowrd",
     "host": "your_host",
-    "database": "your_database"
+    "database": "beyblade_db"
 }
 
 
