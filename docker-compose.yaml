@@ -26,7 +26,7 @@ services:
       MYSQL_PASSWORD: Kill!em!All # Please use a stronger password in production
       MYSQL_DATABASE: beyblade_db
     volumes:
-      - ./db_data:/var/lib/mysql # Bind mount for host access
+      - ./db_data:/var/lib/mysql
 
   nginx:
     image: nginx:latest
@@ -41,3 +41,14 @@ services:
       - web
     restart: unless-stopped
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80" # Expose phpMyAdmin on port 8080
+    environment:
+      PMA_HOST: db # Connect to the 'db' service
+      MYSQL_ROOT_PASSWORD: 25525286 # Use the same root password as your db service
+      UPLOAD_LIMIT: 100M #Optional, Increase upload limit if needed
+    depends_on:
+      - db
