@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS Blades (
     blade_id INT AUTO_INCREMENT PRIMARY KEY,
     blade_name VARCHAR(255) UNIQUE,
     canonical_name VARCHAR(255),
-    blade_type ENUM('Attack', 'Defense', 'Stamina', 'Balance'),
+    blade_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'None'),
     spin_direction ENUM('Right-Spin', 'Left-Spin', 'Dual-Spin'),
-    blade_weight DECIMAL(4, 1)
+    blade_weight DECIMAL(4, 1) NULL
 );
 
 -- Create the Ratchets table
@@ -26,14 +26,14 @@ CREATE TABLE IF NOT EXISTS Ratchets (
     ratchet_name VARCHAR(255) UNIQUE,
     ratchet_protrusions INT,
     ratchet_height INT,
-    ratchet_weight DECIMAL(4, 1)
+    ratchet_weight DECIMAL(4, 1) NULL
 );
 
 -- Create the Bits table
 CREATE TABLE IF NOT EXISTS Bits (
     bit_id INT AUTO_INCREMENT PRIMARY KEY,
     bit_name VARCHAR(255) UNIQUE,
-    bit_weight DECIMAL(4, 1)
+    bit_weight DECIMAL(4, 1) NULL
 );
 
 -- Create the Stats table
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS Stats (
 CREATE TABLE IF NOT EXISTS BladeStats (
     blade_id INT,
     stat_id INT,
-    stat_value DECIMAL(5, 2),
+    stat_value DECIMAL(5, 2) NULL,
     PRIMARY KEY (blade_id, stat_id),
     FOREIGN KEY (blade_id) REFERENCES Blades(blade_id),
     FOREIGN KEY (stat_id) REFERENCES Stats(stat_id)
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS BladeStats (
 CREATE TABLE IF NOT EXISTS RatchetStats (
     ratchet_id INT,
     stat_id INT,
-    stat_value DECIMAL(5, 2),
+    stat_value DECIMAL(5, 2) NULL,
     PRIMARY KEY (ratchet_id, stat_id),
     FOREIGN KEY (ratchet_id) REFERENCES Ratchets(ratchet_id),
     FOREIGN KEY (stat_id) REFERENCES Stats(stat_id)
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS RatchetStats (
 CREATE TABLE IF NOT EXISTS BitStats (
     bit_id INT,
     stat_id INT,
-    stat_value DECIMAL(5, 2),
+    stat_value DECIMAL(5, 2) NULL,
     PRIMARY KEY (bit_id, stat_id),
     FOREIGN KEY (bit_id) REFERENCES Bits(bit_id),
     FOREIGN KEY (stat_id) REFERENCES Stats(stat_id)
@@ -87,8 +87,8 @@ CREATE TABLE IF NOT EXISTS BeybladeCombinations (
     ratchet_id INT,
     bit_id INT,
     combination_name VARCHAR(255) UNIQUE,
-    combination_type ENUM('Attack', 'Defense', 'Stamina', 'Balance'),
-    combination_weight DECIMAL(5, 2),
+    combination_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'Unknown'),
+    combination_weight DECIMAL(5, 2) NULL,
     FOREIGN KEY (blade_id) REFERENCES Blades(blade_id),
     FOREIGN KEY (ratchet_id) REFERENCES Ratchets(ratchet_id),
     FOREIGN KEY (bit_id) REFERENCES Bits(bit_id)
