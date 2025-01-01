@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Combination</title>
+    <script>
+        function updateCombinationName() {
+            const bladeName = document.getElementById('blade_name').value;
+            const ratchetName = document.getElementById('ratchet_name').value;
+            const bitName = document.getElementById('bit_name').value;
+            const combinationNameField = document.getElementById('combination_name');
+
+            if (bladeName && ratchetName && bitName) {
+                combinationNameField.value = `${bladeName} - ${ratchetName} - ${bitName}`;
+            } else {
+                combinationNameField.value = ''; // Clear if any field is empty
+            }
+        }
+
+        function calculateCombinationWeight() {
+          const bladeWeight = parseFloat(document.getElementById('blade_weight_display').innerText) || 0;
+          const ratchetWeight = parseFloat(document.getElementById('ratchet_weight_display').innerText) || 0;
+          const bitWeight = parseFloat(document.getElementById('bit_weight_display').innerText) || 0;
+
+          const combinationWeightField = document.getElementById('combination_weight');
+          combinationWeightField.value = (bladeWeight + ratchetWeight + bitWeight).toFixed(1);
+        }
+    </script>
+</head>
+<body>
+    <h1>Add Combination</h1>
+    <form method="POST">
+        <label for="combination_name">Combination Name:</label><br>
+        <input type="text" id="combination_name" name="combination_name" readonly><br><br>
+
+        <label for="blade_name">Blade Name:</label><br>
+        <select id="blade_name" name="blade_name" onchange="updateCombinationName(); calculateCombinationWeight();">
+            {% for blade in blades %}
+            <option value="{{ blade.blade_name }}" data-weight="{{ blade.blade_weight }}">{{ blade.blade_name }}</option>
+            {% endfor %}
+        </select>
+        <span id="blade_weight_display" style="display:none;"></span><br><br>
+
+        <label for="ratchet_name">Ratchet Name:</label><br>
+        <select id="ratchet_name" name="ratchet_name" onchange="updateCombinationName(); calculateCombinationWeight();">
+            {% for ratchet in ratchets %}
+            <option value="{{ ratchet.ratchet_name }}" data-weight="{{ ratchet.ratchet_weight }}">{{ ratchet.ratchet_name }}</option>
+            {% endfor %}
+        </select>
+        <span id="ratchet_weight_display" style="display:none;"></span><br><br>
+
+        <label for="bit_name">Bit Name:</label><br>
+        <select id="bit_name" name="bit_name" onchange="updateCombinationName(); calculateCombinationWeight();">
+            {% for bit in bits %}
+            <option value="{{ bit.bit_name }}" data-weight="{{ bit.bit_weight }}">{{ bit.bit_name }}</option>
+            {% endfor %}
+        </select>
+        <span id="bit_weight_display" style="display:none;"></span><br><br>
+
+        <label for="combination_type">Combination Type:</label><br>
+        <select id="combination_type" name="combination_type" required>
+            <option value="Attack">Attack</option>
+            <option value="Defense">Defense</option>
+            <option value="Stamina">Stamina</option>
+            <option value="Balance">Balance</option>
+            <option value="Unknown">Unknown</option>
+        </select><br><br>
+
+        <label for="combination_weight">Combination Weight:</label><br>
+        <input type="number" step="0.1" id="combination_weight" name="combination_weight" readonly><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+</body>
+<script>
+    const bladeSelect = document.getElementById('blade_name');
+    const ratchetSelect = document.getElementById('ratchet_name');
+    const bitSelect = document.getElementById('bit_name');
+    const bladeWeightDisplay = document.getElementById('blade_weight_display');
+    const ratchetWeightDisplay = document.getElementById('ratchet_weight_display');
+    const bitWeightDisplay = document.getElementById('bit_weight_display');
+
+    bladeSelect.addEventListener('change', () => {
+        bladeWeightDisplay.innerText = bladeSelect.options[bladeSelect.selectedIndex].dataset.weight;
+    });
+
+    ratchetSelect.addEventListener('change', () => {
+        ratchetWeightDisplay.innerText = ratchetSelect.options[ratchetSelect.selectedIndex].dataset.weight;
+    });
+
+    bitSelect.addEventListener('change', () => {
+        bitWeightDisplay.innerText = bitSelect.options[bitSelect.selectedIndex].dataset.weight;
+    });
+</script>
+</html>

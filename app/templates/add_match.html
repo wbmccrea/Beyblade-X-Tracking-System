@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Match</title>
+</head>
+<body>
+    <h1>Add Match</h1>
+    <form method="POST">
+
+        <label for="tournament_id">Tournament (Optional):</label><br>
+        <select id="tournament_id" name="tournament_id">
+            <option value="">Not part of a tournament</option>
+            {% for tournament in tournaments %}
+                <option value="{{ tournament.tournament_id }}">{{ tournament.tournament_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="player1_name">Player 1:</label><br>
+        <select id="player1_name" name="player1_name" required>
+            {% for player in players %}
+                <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="player2_name">Player 2:</label><br>
+        <select id="player2_name" name="player2_name" required>
+            {% for player in players %}
+                <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="player1_combination_name">Player 1 Combination:</label><br>
+        <select id="player1_combination_name" name="player1_combination_name" required>
+            {% for combination in combinations %}
+                <option value="{{ combination.combination_name }}">{{ combination.combination_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="player2_combination_name">Player 2 Combination:</label><br>
+        <select id="player2_combination_name" name="player2_combination_name" required>
+            {% for combination in combinations %}
+                <option value="{{ combination.combination_name }}">{{ combination.combination_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="player1_launcher_name">Player 1 Launcher:</label><br>
+        <select id="player1_launcher_name" name="player1_launcher_name" required>
+            {% for launcher in launchers %}
+                <option value="{{ launcher.launcher_name }}">{{ launcher.launcher_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="player2_launcher_name">Player 2 Launcher:</label><br>
+        <select id="player2_launcher_name" name="player2_launcher_name" required>
+            {% for launcher in launchers %}
+                <option value="{{ launcher.launcher_name }}">{{ launcher.launcher_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="winner_name">Winner:</label><br>
+        <select id="winner_name" name="winner_name" required>
+            {% for player in players %}
+                <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="finish_type">Finish Type:</label><br>
+        <select id="finish_type" name="finish_type" required>
+            <option value="Draw">Draw</option>
+            <option value="Survivor">Survivor</option>
+            <option value="KO">KO</option>
+            <option value="Burst">Burst</option>
+            <option value="Extreme">Extreme</option>
+        </select><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
