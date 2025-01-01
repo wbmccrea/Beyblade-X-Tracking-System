@@ -3,16 +3,18 @@ services:
     image: mariadb:10.11
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-Sample_root_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
       MYSQL_USER: ${DB_USER:-beyblade_user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-Sample_DB_Password}
       MYSQL_DATABASE: ${DB_NAME:-beyblade_db}
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes' # Temporarily allow empty root password for initial setup
+      MYSQL_ROOT_HOST: "%"  # Allow root connections from any host (for initial setup)
     ports:
       - "3306:3306"
     command: --init-file /docker-entrypoint-initdb.d/init.sql
-    volumes: # Only ONE volumes section
-      - ./db_init:/docker-entrypoint-initdb.d # Bind mount for init script
-      - ./db_data:/var/lib/mysql # Bind mount for database data
+    volumes:
+      - ./db_init:/docker-entrypoint-initdb.d
+      - ./db_data:/var/lib/mysql
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
