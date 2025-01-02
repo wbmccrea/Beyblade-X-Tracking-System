@@ -286,7 +286,7 @@ def add_match():
             except Exception as e:
                 print(f"Error retrieving Player 2 Combo ID: {e}")
                 p2_combo_id = None
-            
+
             try:
                 p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'], "launcher_id")
                 print(f"Player 1 Launcher ID: {p1_launcher_id}")
@@ -305,37 +305,47 @@ def add_match():
                 print(f"Error retrieving Player 2 Launcher ID: {e}")
                 p2_launcher_id = None
 
-            try:
-                winner_id = get_id_by_name("Players", data['winner_name'], "player_id")
-                print(f"Winner ID: {winner_id}")
-                if winner_id is None:
-                    print(f"Error: Winner '{data['winner_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving Winner ID: {e}")
-                winner_id = None
-
             tournament_id = data.get('tournament_id')
             print(f"Tournament ID: {tournament_id}")
 
-            if not all([player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id]):
+            if data['finish_type'] == "Draw":
+                winner_id = None
+                print("Winner ID: None (Draw)")
+            else:
+                try:
+                    winner_id = get_id_by_name("Players", data['winner_name'], "player_id")
+                    print(f"Winner ID: {winner_id}")
+                    if winner_id is None:
+                        print(f"Error: Winner '{data['winner_name']}' not found.")
+                except Exception as e:
+                    print(f"Error retrieving Winner ID: {e}")
+                    winner_id = None
+
+            if not all([player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id]) or (data['finish_type'] != "Draw" and winner_id is None):
                 return "Invalid player, combination, launcher or winner name", 400
 
             try:
-                cursor.execute("""
-                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.datetime.now()))
+                if data['finish_type'] == "Draw":
+                    cursor.execute("""
+                        INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, finish_type, match_time)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, data['finish_type'], datetime.datetime.now()))
+                else:
+                    cursor.execute("""
+                        INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.datetime.now()))
                 conn.commit()
                 return "Match added successfully!"
             except mysql.connector.Error as e:
                 return f"Error adding match: {e}", 400
-        
+
         return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list)
 
-    except mysql.connector.Error as e: # catch database errors during data retrieval
+    except mysql.connector.Error as e:
         return f"Database error: {e}", 500
     finally:
-        if conn: #check if connection exists before attempting to close
+        if conn:
             conn.close()
 
 if __name__ == '__main__':
