@@ -26,15 +26,23 @@ def get_db_connection():
         return None
 
 # Helper function to get ID by name
-def get_id_by_name(table, name):
+def get_id_by_name(table, name, id_column):  # Add id_column parameter
     conn = get_db_connection()
     if conn is None:
         return None
     cursor = conn.cursor()
-    cursor.execute(f"SELECT id FROM {table} WHERE name = %s", (name,))
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result else None
+    try:
+        cursor.execute(f"SELECT {id_column} FROM {table} WHERE name = %s", (name,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
+    except mysql.connector.Error as e:
+        print(f"Database error in get_id_by_name: {e}") #Print the error for easier debugging
+        return None
+    finally:
+        conn.close()
 
 
 
@@ -122,8 +130,25 @@ def add_combination():
     conn.close()
 
     if request.method == 'POST':
-        # ... (rest of the POST handling code - no changes)
-        pass #this is here to prevent an indentation error. Remove this line
+        data = request.form
+        conn = get_db_connection()
+        if conn is None:
+            return "Database connection error", 500
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO BeybladeCombinations (blade_id, ratchet_id, bit_id, combination_name, combination_type, combination_weight)
+                VALUES ((SELECT blade_id FROM Blades WHERE blade_name = %s),
+                        (SELECT ratchet_id FROM Ratchets WHERE ratchet_name = %s),
+                        (SELECT bit_id FROM Bits WHERE bit_name = %s),
+                        %s, %s, %s)
+            """, (data['blade_name'], data['ratchet_name'], data['bit_name'], data['combination_name'], data['combination_type'], data.get('combination_weight'))) #data.get to prevent errors if weight is empty
+            conn.commit()
+            conn.close()
+            return "Combination added successfully!"
+        except mysql.connector.Error as e:
+            conn.close()
+            return f"Error adding combination: {e}", 400
     return render_template('add_combination.html', blades=blade_list, ratchets=ratchet_list, bits=bit_list)
 
 @app.route('/add_launcher', methods=['GET', 'POST'])
@@ -204,63 +229,55 @@ def add_match():
         return "Database connection error", 500
     cursor = conn.cursor()
 
-    cursor.execute("SELECT player_name FROM Players")
-    players = cursor.fetchall()
-    player_list = []
-    for player in players:
-        player_list.append({"player_name": player[0]})
+    try:
+        cursor.execute("SELECT player_name FROM Players")
+        players = cursor.fetchall()
+        player_list = [{"player_name": player[0]} for player in players]
 
-    cursor.execute("SELECT combination_name FROM BeybladeCombinations")
-    combinations = cursor.fetchall()
-    combination_list = []
-    for combination in combinations:
-        combination_list.append({"combination_name": combination[0]})
+        cursor.execute("SELECT combination_name FROM BeybladeCombinations")
+        combinations = cursor.fetchall()
+        combination_list = [{"combination_name": combo[0]} for combo in combinations]
 
-    cursor.execute("SELECT launcher_name FROM LauncherTypes")
-    launchers = cursor.fetchall()
-    launcher_list = []
-    for launcher in launchers:
-        launcher_list.append({"launcher_name": launcher[0]})
+        cursor.execute("SELECT launcher_name FROM LauncherTypes")
+        launchers = cursor.fetchall()
+        launcher_list = [{"launcher_name": launcher[0]} for launcher in launchers]
 
-    cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
-    tournaments = cursor.fetchall()
-    tournament_list = []
-    for tournament in tournaments:
-        tournament_list.append({"tournament_name": tournament[0], "tournament_id": tournament[1]})
-    conn.close()
+        cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
+        tournaments = cursor.fetchall()
+        tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
 
-    if request.method == 'POST':
-        data = request.form
+        if request.method == 'POST':
+            data = request.form
 
-        player1_id = get_id_by_name("Players", data['player1_name'])
-        player2_id = get_id_by_name("Players", data['player2_name'])
-        p1_combo_id = get_id_by_name("BeybladeCombinations", data['player1_combination_name'])
-        p2_combo_id = get_id_by_name("BeybladeCombinations", data['player2_combination_name'])
-        p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'])
-        p2_launcher_id = get_id_by_name("LauncherTypes", data['player2_launcher_name'])
-        winner_id = get_id_by_name("Players", data['winner_name'])
-        tournament_id = data.get('tournament_id') # Get the tournament id, could be None
+            player1_id = get_id_by_name("Players", data['player1_name'])
+            player2_id = get_id_by_name("Players", data['player2_name'])
+            p1_combo_id = get_id_by_name("BeybladeCombinations", data['player1_combination_name'])
+            p2_combo_id = get_id_by_name("BeybladeCombinations", data['player2_combination_name'])
+            p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'])
+            p2_launcher_id = get_id_by_name("LauncherTypes", data['player2_launcher_name'])
+            winner_id = get_id_by_name("Players", data['winner_name'])
+            tournament_id = data.get('tournament_id')
 
-        if not player1_id or not player2_id or not p1_combo_id or not p2_combo_id or not p1_launcher_id or not p2_launcher_id or not winner_id:
-            return "Invalid player, combination, launcher or winner name", 400
+            if not all([player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id]):
+                return "Invalid player, combination, launcher or winner name", 400
 
-        conn = get_db_connection()
-        if conn is None:
-            return "Database connection error", 500
-        cursor = conn.cursor()
+            try:
+                cursor.execute("""
+                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.datetime.now()))
+                conn.commit()
+                return "Match added successfully!"
+            except mysql.connector.Error as e:
+                return f"Error adding match: {e}", 400
+        
+        return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list)
 
-        try:
-            cursor.execute("""
-                INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.datetime.now()))
-            conn.commit()
+    except mysql.connector.Error as e: # catch database errors during data retrieval
+        return f"Database error: {e}", 500
+    finally:
+        if conn: #check if connection exists before attempting to close
             conn.close()
-            return "Match added successfully!"
-        except mysql.connector.Error as e:
-            conn.close()
-            return f"Error adding match: {e}", 400
-    return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
