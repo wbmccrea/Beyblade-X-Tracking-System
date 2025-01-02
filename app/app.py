@@ -32,11 +32,14 @@ def get_id_by_name(table, name, id_column):
     cursor = conn.cursor()
     try:
         name = name.strip()
+        print(f"Looking for '{name}' in table '{table}'")
         cursor.execute(f"SELECT {id_column} FROM {table} WHERE name = %s", (name,))
         result = cursor.fetchone()
         if result:
+            print(f"Found {id_column}: {result[0]} for '{name}'")
             return result[0]
         else:
+            print(f"No '{id_column}' found for '{name}' in table '{table}'")
             return None
     except mysql.connector.Error as e:
         print(f"Database error in get_id_by_name: {e}")
@@ -372,7 +375,7 @@ def add_match():
     finally:
         if conn:
             conn.close()
-            
+
 @app.route('/')  # Route for the landing page
 def index():
     return render_template('index.html')
