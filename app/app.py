@@ -15,23 +15,24 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD")
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME")
         )
         return conn
-    except mysql.connector.Error as err:
-        print(f"Error connecting to database: {err}")
+    except mysql.connector.Error as e:
+        print(f"Database connection error: {e}")
         return None
 
 # Helper function to get ID by name
-def get_id_by_name(table, name, id_column):  # Add id_column parameter
+def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
     if conn is None:
         return None
     cursor = conn.cursor()
     try:
+        name = name.strip()
         cursor.execute(f"SELECT {id_column} FROM {table} WHERE name = %s", (name,))
         result = cursor.fetchone()
         if result:
@@ -39,7 +40,7 @@ def get_id_by_name(table, name, id_column):  # Add id_column parameter
         else:
             return None
     except mysql.connector.Error as e:
-        print(f"Database error in get_id_by_name: {e}") #Print the error for easier debugging
+        print(f"Database error in get_id_by_name: {e}")
         return None
     finally:
         conn.close()
@@ -230,7 +231,6 @@ def add_match():
     cursor = conn.cursor()
 
     try:
-        # Fetch data from database
         cursor.execute("SELECT player_name FROM Players")
         players = cursor.fetchall()
         player_list = [{"player_name": player[0]} for player in players]
@@ -251,7 +251,6 @@ def add_match():
             data = request.form
             print(f"Form Data: {data}")
 
-            # Refined debugging for `get_id_by_name`:
             try:
                 player1_id = get_id_by_name("Players", data['player1_name'], "player_id")
                 print(f"Player 1 ID: {player1_id}")
@@ -270,20 +269,73 @@ def add_match():
                 print(f"Error retrieving player 2 ID: {e}")
                 player2_id = None
 
-            # ... (similar logic for p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id)
+            try:
+                p1_combo_id = get_id_by_name("BeybladeCombinations", data['player1_combination_name'], "combination_id")
+                print(f"Player 1 Combo ID: {p1_combo_id}")
+                if p1_combo_id is None:
+                    print(f"Error: Combination 1 '{data['player1_combination_name']}' not found.")
+            except Exception as e:
+                print(f"Error retrieving Player 1 Combo ID: {e}")
+                p1_combo_id = None
 
-            # Check if any IDs are missing and provide specific error messages
+            try:
+                p2_combo_id = get_id_by_name("BeybladeCombinations", data['player2_combination_name'], "combination_id")
+                print(f"Player 2 Combo ID: {p2_combo_id}")
+                if p2_combo_id is None:
+                    print(f"Error: Combination 2 '{data['player2_combination_name']}' not found.")
+            except Exception as e:
+                print(f"Error retrieving Player 2 Combo ID: {e}")
+                p2_combo_id = None
+            
+            try:
+                p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'], "launcher_id")
+                print(f"Player 1 Launcher ID: {p1_launcher_id}")
+                if p1_launcher_id is None:
+                    print(f"Error: Launcher 1 '{data['player1_launcher_name']}' not found.")
+            except Exception as e:
+                print(f"Error retrieving Player 1 Launcher ID: {e}")
+                p1_launcher_id = None
+
+            try:
+                p2_launcher_id = get_id_by_name("LauncherTypes", data['player2_launcher_name'], "launcher_id")
+                print(f"Player 2 Launcher ID: {p2_launcher_id}")
+                if p2_launcher_id is None:
+                    print(f"Error: Launcher 2 '{data['player2_launcher_name']}' not found.")
+            except Exception as e:
+                print(f"Error retrieving Player 2 Launcher ID: {e}")
+                p2_launcher_id = None
+
+            try:
+                winner_id = get_id_by_name("Players", data['winner_name'], "player_id")
+                print(f"Winner ID: {winner_id}")
+                if winner_id is None:
+                    print(f"Error: Winner '{data['winner_name']}' not found.")
+            except Exception as e:
+                print(f"Error retrieving Winner ID: {e}")
+                winner_id = None
+
+            tournament_id = data.get('tournament_id')
+            print(f"Tournament ID: {tournament_id}")
+
             if not all([player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id]):
                 return "Invalid player, combination, launcher or winner name", 400
 
-            # ... (rest of POST handling - insert into database)
-
+            try:
+                cursor.execute("""
+                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.datetime.now()))
+                conn.commit()
+                return "Match added successfully!"
+            except mysql.connector.Error as e:
+                return f"Error adding match: {e}", 400
+        
         return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list)
 
-    except mysql.connector.Error as e:  # catch database errors during data retrieval
+    except mysql.connector.Error as e: # catch database errors during data retrieval
         return f"Database error: {e}", 500
     finally:
-        if conn:  # check if connection exists before attempting to close
+        if conn: #check if connection exists before attempting to close
             conn.close()
 
 if __name__ == '__main__':
