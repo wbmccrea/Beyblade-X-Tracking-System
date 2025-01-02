@@ -28,8 +28,6 @@ services:
   web:
     build: ./app
     restart: unless-stopped
-    ports:
-      - "5000:5000"
     depends_on:
       - db
     environment:
@@ -41,3 +39,14 @@ services:
       - ./app:/app
       - ./app/static:/app/static
       - ./app/templates:/app/templates
+
+  nginx:
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - "80:80" # Expose port 80 for HTTP
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d # Mount Nginx config
+      - ./app/static:/var/www/static # Mount static files
+    depends_on:
+      - web
