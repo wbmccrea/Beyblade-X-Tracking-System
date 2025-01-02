@@ -25,7 +25,6 @@ def get_db_connection():
         print(f"Database connection error: {e}")
         return None
 
-# Helper function to get ID by name
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
     if conn is None:
@@ -43,7 +42,8 @@ def get_id_by_name(table, name, id_column):
         print(f"Database error in get_id_by_name: {e}")
         return None
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 
@@ -229,23 +229,39 @@ def add_match():
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
+    player_list = []
+    combination_list = []
+    launcher_list = []
+    tournament_list = []
 
     try:
-        cursor.execute("SELECT player_name FROM Players")
-        players = cursor.fetchall()
-        player_list = [{"player_name": player[0]} for player in players]
+        try:
+            cursor.execute("SELECT player_name FROM Players")
+            players = cursor.fetchall()
+            player_list = [{"player_name": player[0]} for player in players]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving players: {e}")
 
-        cursor.execute("SELECT combination_name FROM BeybladeCombinations")
-        combinations = cursor.fetchall()
-        combination_list = [{"combination_name": combo[0]} for combo in combinations]
+        try:
+            cursor.execute("SELECT combination_name FROM BeybladeCombinations")
+            combinations = cursor.fetchall()
+            combination_list = [{"combination_name": combo[0]} for combo in combinations]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving combinations: {e}")
 
-        cursor.execute("SELECT launcher_name FROM LauncherTypes")
-        launchers = cursor.fetchall()
-        launcher_list = [{"launcher_name": launcher[0]} for launcher in launchers]
+        try:
+            cursor.execute("SELECT launcher_name FROM LauncherTypes")
+            launchers = cursor.fetchall()
+            launcher_list = [{"launcher_name": launcher[0]} for launcher in launchers]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving launchers: {e}")
 
-        cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
-        tournaments = cursor.fetchall()
-        tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
+        try:
+            cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
+            tournaments = cursor.fetchall()
+            tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving tournaments: {e}")
 
         if request.method == 'POST':
             data = request.form
@@ -306,7 +322,16 @@ def add_match():
                 p2_launcher_id = None
 
             tournament_id = data.get('tournament_id')
-            print(f"Tournament ID: {tournament_id}")
+            print(f"Tournament ID (before conversion): {tournament_id}")
+            if tournament_id == "":
+                tournament_id = None
+                print(f"Tournament ID (after conversion): {tournament_id}")
+            else:
+                try:
+                    tournament_id = int(tournament_id)
+                    print(f"Tournament ID (after conversion): {tournament_id}")
+                except ValueError:
+                    return "Invalid Tournament ID", 400
 
             if data['finish_type'] == "Draw":
                 winner_id = None
@@ -347,10 +372,7 @@ def add_match():
     finally:
         if conn:
             conn.close()
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
-
+            
 @app.route('/')  # Route for the landing page
 def index():
     return render_template('index.html')
