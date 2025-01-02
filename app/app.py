@@ -1,27 +1,29 @@
-from flask import Flask, jsonify, request, render_template, send_from_directory
-import mysql.connector
-import datetime
 import os
+from dotenv import load_dotenv
+import mysql.connector
+from flask import Flask, jsonify, request, render_template
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# Database configuration (replace with your credentials)
-db_config = {
-    "user": "beyblade_user",
-    "password": "Sample_DB_Password",
-    "host": "db",
-    "database": "beyblade_db"
-}
-
+DB_HOST = os.environ.get("DB_HOST")
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
 
 def get_db_connection():
     try:
-        conn = mysql.connector.connect(**db_config)
+        conn = mysql.connector.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+        )
         return conn
     except mysql.connector.Error as err:
-        print("Error connecting to database:", err)
+        print(f"Error connecting to database: {err}")
         return None
-
 
 # Helper function to get ID by name
 def get_id_by_name(table, name):

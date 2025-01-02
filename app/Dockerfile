@@ -4,11 +4,14 @@ FROM python:3.11-slim-bullseye
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the application code
-COPY . .
+# Copy the requirements file FIRST
+COPY requirements.txt .
 
-# Install dependencies
+# Install dependencies using requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application code AFTER installing requirements
+COPY . .
 
 # Expose the port the app runs on
 EXPOSE 5000
