@@ -265,7 +265,7 @@ def add_match():
             tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
         except mysql.connector.Error as e:
             print(f"Error retrieving tournaments: {e}")
-
+        print("add_match route hit!") # Add this print statement
         if request.method == 'POST':
             data = request.form
             print(f"Form Data: {data}")
