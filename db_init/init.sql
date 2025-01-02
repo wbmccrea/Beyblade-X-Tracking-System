@@ -29,10 +29,11 @@ CREATE TABLE IF NOT EXISTS Ratchets (
     ratchet_weight DECIMAL(4, 1) NULL
 );
 
--- Create the Bits table
+-- Modify the Bits table to add full_bit_name
 CREATE TABLE IF NOT EXISTS Bits (
     bit_id INT AUTO_INCREMENT PRIMARY KEY,
     bit_name VARCHAR(255) UNIQUE,
+    full_bit_name VARCHAR(255),  -- New column for full name
     bit_weight DECIMAL(4, 1) NULL
 );
 
