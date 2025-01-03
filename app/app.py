@@ -212,7 +212,7 @@ def add_combination():
 
     try:
         cursor.execute("SELECT blade_name FROM Blades")
-        blades = [{"name": row[0]} for row in cursor.fetchall()]  # List of dictionaries
+        blades = [{"name": row[0]} for row in cursor.fetchall()]
         cursor.execute("SELECT ratchet_name FROM Ratchets")
         ratchets = [{"name": row[0]} for row in cursor.fetchall()]
         cursor.execute("SELECT bit_name FROM Bits")
@@ -220,21 +220,11 @@ def add_combination():
 
         if request.method == 'POST':
             data = request.form
-            blade_name = data.get('blade_name')
-            ratchet_name = data.get('ratchet_name')
-            bit_name = data.get('bit_name')
-
-            # Generate combination name if components are selected
-            if blade_name and ratchet_name and bit_name:
-                combination_name = f"{blade_name}-{ratchet_name}-{bit_name}"
-            else:
-                combination_name = None
-
             try:
                 weight = float(data['combination_weight']) if data.get('combination_weight') else None
             except ValueError:
                 return "Invalid weight value. Please enter a number.", 400
-
+            
             try:
                 cursor.execute("""
                     INSERT INTO BeybladeCombinations (blade_id, ratchet_id, bit_id, combination_name, combination_type, combination_weight)
@@ -242,7 +232,7 @@ def add_combination():
                             (SELECT ratchet_id FROM Ratchets WHERE ratchet_name = %s),
                             (SELECT bit_id FROM Bits WHERE bit_name = %s),
                             %s, %s, %s)
-                """, (blade_name, ratchet_name, bit_name, combination_name, data['combination_type'], weight))
+                """, (data['blade_name'], data['ratchet_name'], data['bit_name'], data['combination_name'], data['combination_type'], weight))
                 conn.commit()
                 return "Combination added successfully!"
             except mysql.connector.Error as e:
