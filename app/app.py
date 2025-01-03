@@ -87,14 +87,18 @@ def add_blade():
             spin_direction = data['spin_direction']
 
             cursor.execute("INSERT INTO Blades (blade_name, canonical_name, blade_type, spin_direction) VALUES (%s, %s, %s, %s)",
-                           (blade_name, canonical_name, blade_type, spin_direction)) #Removed weight from insert
+                           (blade_name, canonical_name, blade_type, spin_direction))
             blade_id = cursor.lastrowid
 
+            # Handle stats, including weight
             if any(data.get(stat) for stat in ['attack', 'defense', 'stamina', 'weight']):
                 attack = int(data.get('attack', 0)) if data.get('attack') else None
                 defense = int(data.get('defense', 0)) if data.get('defense') else None
                 stamina = int(data.get('stamina', 0)) if data.get('stamina') else None
-                weight_stat = int(data.get('weight', 0)) if data.get('weight') else None
+                try:
+                    weight_stat = float(data['weight']) if data.get('weight') else None
+                except ValueError:
+                    return "Invalid weight value. Please enter a number.", 400
 
                 cursor.execute("""
                     INSERT INTO BladeStats (blade_id, attack, defense, stamina, weight)
@@ -199,51 +203,47 @@ def add_bit():
             return f"Error adding bit: {e}", 400
     return render_template('add_bit.html')
 
-@app.route('/add_combination', methods=['GET', 'POST'])
+@@app.route('/add_combination', methods=['GET', 'POST'])
 def add_combination():
     conn = get_db_connection()
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
 
-    cursor.execute("SELECT blade_name, blade_weight FROM Blades")
-    blades = cursor.fetchall()
-    blade_list = []
-    for blade in blades:
-        blade_list.append({"blade_name": blade[0], "blade_weight": blade[1]})
-    cursor.execute("SELECT ratchet_name, ratchet_weight FROM Ratchets")
-    ratchets = cursor.fetchall()
-    ratchet_list = []
-    for ratchet in ratchets:
-        ratchet_list.append({"ratchet_name": ratchet[0], "ratchet_weight": ratchet[1]})
-    cursor.execute("SELECT bit_name, bit_weight FROM Bits")
-    bits = cursor.fetchall()
-    bit_list = []
-    for bit in bits:
-        bit_list.append({"bit_name": bit[0], "bit_weight": bit[1]})
-    conn.close()
+    try:
+        cursor.execute("SELECT blade_name FROM Blades")  # Only select names
+        blades = cursor.fetchall()
+        cursor.execute("SELECT ratchet_name FROM Ratchets")  # Only select names
+        ratchets = cursor.fetchall()
+        cursor.execute("SELECT bit_name FROM Bits")  # Only select names
+        bits = cursor.fetchall()
 
-    if request.method == 'POST':
-        data = request.form
-        conn = get_db_connection()
-        if conn is None:
-            return "Database connection error", 500
-        cursor = conn.cursor()
-        try:
-            cursor.execute("""
-                INSERT INTO BeybladeCombinations (blade_id, ratchet_id, bit_id, combination_name, combination_type, combination_weight)
-                VALUES ((SELECT blade_id FROM Blades WHERE blade_name = %s),
-                        (SELECT ratchet_id FROM Ratchets WHERE ratchet_name = %s),
-                        (SELECT bit_id FROM Bits WHERE bit_name = %s),
-                        %s, %s, %s)
-            """, (data['blade_name'], data['ratchet_name'], data['bit_name'], data['combination_name'], data['combination_type'], data.get('combination_weight'))) #data.get to prevent errors if weight is empty
-            conn.commit()
+        if request.method == 'POST':
+            data = request.form
+            try:
+                weight = float(data['combination_weight']) if data.get('combination_weight') else None
+            except ValueError:
+                return "Invalid weight value. Please enter a number.", 400
+            try:
+                cursor.execute("""
+                    INSERT INTO BeybladeCombinations (blade_id, ratchet_id, bit_id, combination_name, combination_type, combination_weight)
+                    VALUES ((SELECT blade_id FROM Blades WHERE blade_name = %s),
+                            (SELECT ratchet_id FROM Ratchets WHERE ratchet_name = %s),
+                            (SELECT bit_id FROM Bits WHERE bit_name = %s),
+                            %s, %s, %s)
+                """, (data['blade_name'], data['ratchet_name'], data['bit_name'], data['combination_name'], data['combination_type'], weight))
+                conn.commit()
+                return "Combination added successfully!"
+            except mysql.connector.Error as e:
+                conn.rollback()
+                return f"Error adding combination: {e}", 400
+
+    except mysql.connector.Error as e:
+        return f"Error retrieving data: {e}", 500
+    finally:
+        if conn:
             conn.close()
-            return "Combination added successfully!"
-        except mysql.connector.Error as e:
-            conn.close()
-            return f"Error adding combination: {e}", 400
-    return render_template('add_combination.html', blades=blade_list, ratchets=ratchet_list, bits=bit_list)
+    return render_template('add_combination.html', blades=blades, ratchets=ratchets, bits=bits)
 
 @app.route('/add_launcher', methods=['GET', 'POST'])
 def add_launcher():
