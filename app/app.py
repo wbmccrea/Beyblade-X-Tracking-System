@@ -9,7 +9,7 @@ import logging
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)  # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+logging.basicConfig(level=logging.DEBUG)  # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 logger = logging.getLogger(__name__) #get a logger object
 
 
@@ -30,31 +30,31 @@ def get_db_connection():
         )
         return conn
     except mysql.connector.Error as e:
-        print(f"Database connection error: {e}")
+        logger.debug(f"Database connection error: {e}")
         return None
 
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
     if conn is None:
-        print("get_id_by_name: Database connection failed")
+        logger.debug("get_id_by_name: Database connection failed")
         return None
     cursor = conn.cursor()
     try:
         name = name.strip()
-        print(f"get_id_by_name: Looking for '{name}' in table '{table}'")
+        logger.debug(f"get_id_by_name: Looking for '{name}' in table '{table}'")
         # Make the comparison case-insensitive using LOWER()
         query = f"SELECT {id_column} FROM {table} WHERE LOWER(name) = LOWER(%s)"
-        print(f"get_id_by_name: Executing query: {query} with name: {name}")
+        logger.debug(f"get_id_by_name: Executing query: {query} with name: {name}")
         cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
-            print(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
+            logger.debug(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
             return result[0]
         else:
-            print(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
+            logger.debug(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
             return None
     except mysql.connector.Error as e:
-        print(f"get_id_by_name: Database error: {e}")
+        logger.debug(f"get_id_by_name: Database error: {e}")
         return None
     finally:
         if conn:
@@ -223,16 +223,16 @@ def add_tournament():
             # Attempt to parse date strings
             try:
                 start_date = datetime.strptime(data['start_date'], '%Y-%m-%dT%H:%M')
-                print(f"Start Date (parsed): {start_date}")
+                logger.debug(f"Start Date (parsed): {start_date}")
             except ValueError as ve:
-                print(f"Invalid start date format: {ve}")
+                logger.debug(f"Invalid start date format: {ve}")
                 return "Invalid start date format. Please use YYYY-MM-DD HH:MM:SS", 400
 
             try:
                 end_date = datetime.strptime(data['end_date'], '%Y-%m-%dT%H:%M')
-                print(f"End Date (parsed): {end_date}")
+                logger.debug(f"End Date (parsed): {end_date}")
             except ValueError as ve:
-                print(f"Invalid end date format: {ve}")
+                logger.debug(f"Invalid end date format: {ve}")
                 return "Invalid end date format. Please use YYYY-MM-DD HH:MM:SS", 400
 
             # Insert tournament data (assuming validation for other fields)
@@ -242,7 +242,7 @@ def add_tournament():
             conn.close()
             return "Tournament added successfully!"
         except mysql.connector.Error as e:
-            print(f"Database Error: {e}")  # Print the full error for debugging
+            logger.debug(f"Database Error: {e}")  # Print the full error for debugging
             return f"Error adding tournament: {e}", 500  # Return user-friendly error message
     return render_template('add_tournament.html')
 
@@ -266,37 +266,37 @@ def add_match():
             players = cursor.fetchall()
             player_list = [{"player_name": player[0]} for player in players]
         except mysql.connector.Error as e:
-            print(f"Error retrieving players: {e}")
+            logger.debug(f"Error retrieving players: {e}")
 
         try:
             cursor.execute("SELECT combination_name FROM BeybladeCombinations")
             combinations = cursor.fetchall()
             combination_list = [{"combination_name": combo[0]} for combo in combinations]
         except mysql.connector.Error as e:
-            print(f"Error retrieving combinations: {e}")
+            logger.debug(f"Error retrieving combinations: {e}")
 
         try:
             cursor.execute("SELECT launcher_name FROM LauncherTypes")
             launchers = cursor.fetchall()
             launcher_list = [{"launcher_name": launcher[0]} for launcher in launchers]
         except mysql.connector.Error as e:
-            print(f"Error retrieving launchers: {e}")
+            logger.debug(f"Error retrieving launchers: {e}")
 
         try:
             cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
             tournaments = cursor.fetchall()
             tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
         except mysql.connector.Error as e:
-            print(f"Error retrieving tournaments: {e}")
+            logger.debug(f"Error retrieving tournaments: {e}")
 
         if request.method == 'POST':
             data = request.form
-            print(f"Raw Form Data: {data}")
+            logger.debug(f"Raw Form Data: {data}")
 
             decoded_data = {}
             for key, value in data.items():
                 decoded_data[key] = unquote(value)
-            print(f"Decoded Form Data: {decoded_data}")
+            logger.debug(f"Decoded Form Data: {decoded_data}")
 
             player1_id = get_id_by_name("Players", decoded_data['player1_name'], "player_id")
             if player1_id is None:
@@ -351,16 +351,16 @@ def add_match():
                     """
                     val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now())
 
-                print(f"Executing SQL: {sql} with values: {val}")
+                logger.debug(f"Executing SQL: {sql} with values: {val}")
                 cursor.execute(sql, val)
                 conn.commit()
                 return "Match added successfully!"
             except mysql.connector.Error as e:
-                print(f"Database Error during insert: {e}")
+                logger.debug(f"Database Error during insert: {e}")
                 return f"Error adding match: {e}", 500
 
     except mysql.connector.Error as e:
-        print(f"Database error: {e}", 500)
+        logger.debug(f"Database error: {e}", 500)
         return f"Database error: {e}", 500
     finally:
         if conn:
