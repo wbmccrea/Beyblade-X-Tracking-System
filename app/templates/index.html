@@ -2,27 +2,55 @@
 <html>
 <head>
     <title>Beyblade X Database</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .navigation {
+            display: flex;
+            justify-content: center; /* Center the links */
+            gap: 20px; /* Space between links */
+            margin-bottom: 20px;
+        }
+
+        .navigation a {
+            padding: 10px 20px; /* Add padding to the links */
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 5px; /* Rounded corners */
+        }
+        .navigation a:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+    </style>
 </head>
 <body>
     <h1>Welcome to the Beyblade X Database</h1>
 
-    <h2>Add Data</h2>
-    <ul>
-        <li><a href="/add_blade">Add Blade</a></li>
-        <li><a href="/add_ratchet">Add Ratchet</a></li>
-        <li><a href="/add_bit">Add Bit</a></li>
-        <li><a href="/add_combination">Add Combination</a></li>
-        <li><a href="/add_launcher">Add Launcher</a></li>
-        <li><a href="/add_player">Add Player</a></li>
-        <li><a href="/add_match">Add Match</a></li>
-        <li><a href="/add_tournament">Add Tournament</a></li>
+    <div class="navigation">
+        <a href="/add_blade">Add Blade</a>
+        <a href="/add_ratchet">Add Ratchet</a>
+        <a href="/add_bit">Add Bit</a>
+        <a href="/add_combination">Add Combination</a>
+        <a href="/add_launcher">Add Launcher</a>
+        <a href="/add_player">Add Player</a>
+        <a href="/add_tournament">Add Tournament</a>
+        <a href="/add_match">Add Match</a>
+        <a href="/tournaments/stats">Tournament Stats</a>
+        <a href="/players/stats">Player Stats</a>
+        <a href="/beyblades/stats">Beyblade Stats</a>
+    </div>
 
-    </ul>
+    <p>Use the links above to manage and view Beyblade X data.</p>
 
-    <h2>View Data (Future Feature)</h2>
-    <p>Links to view and search data will go here.</p>
-
-        <h2>Other Features (Future Feature)</h2>
-    <p>Links to other features will go here.</p>
 </body>
 </html>
