@@ -243,16 +243,48 @@ if __name__ == '__main__':
 
 @app.route('/add_match', methods=['GET', 'POST'])
 def add_match():
-    # ... (connection and cursor setup)
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
+    player_list = []
+    combination_list = []
+    launcher_list = []
+    tournament_list = []
 
     try:
-        # ... (retrieving player, combination, launcher, and tournament lists)
+        try:
+            cursor.execute("SELECT player_name FROM Players")
+            players = cursor.fetchall()
+            player_list = [{"player_name": player[0]} for player in players]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving players: {e}")
+
+        try:
+            cursor.execute("SELECT combination_name FROM BeybladeCombinations")
+            combinations = cursor.fetchall()
+            combination_list = [{"combination_name": combo[0]} for combo in combinations]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving combinations: {e}")
+
+        try:
+            cursor.execute("SELECT launcher_name FROM LauncherTypes")
+            launchers = cursor.fetchall()
+            launcher_list = [{"launcher_name": launcher[0]} for launcher in launchers]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving launchers: {e}")
+
+        try:
+            cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
+            tournaments = cursor.fetchall()
+            tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
+        except mysql.connector.Error as e:
+            print(f"Error retrieving tournaments: {e}")
 
         if request.method == 'POST':
             data = request.form
             print(f"Form Data: {data}")
 
-            # Retrieve IDs and check for None IMMEDIATELY
             player1_id = get_id_by_name("Players", data['player1_name'], "player_id")
             if player1_id is None:
                 return f"Invalid Player 1: {data['player1_name']}", 400
@@ -292,7 +324,6 @@ def add_match():
                 if winner_id is None:
                     return f"Invalid Winner: {data['winner_name']}", 400
 
-            # Now that all IDs are validated, construct and execute the query
             try:
                 if data['finish_type'] == "Draw":
                     sql = """
