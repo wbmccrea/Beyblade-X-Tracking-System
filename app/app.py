@@ -35,8 +35,9 @@ def get_id_by_name(table, name, id_column):
     try:
         name = name.strip()
         print(f"get_id_by_name: Looking for '{name}' in table '{table}'")
-        query = f"SELECT {id_column} FROM {table} WHERE name = %s"
-        print(f"get_id_by_name: Executing query: {query} with name: {name}") # print the query being executed
+        # Make the comparison case-insensitive using LOWER()
+        query = f"SELECT {id_column} FROM {table} WHERE LOWER(name) = LOWER(%s)"
+        print(f"get_id_by_name: Executing query: {query} with name: {name}")
         cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
