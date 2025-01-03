@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import mysql.connector
 from flask import Flask, jsonify, request, render_template
 from datetime import datetime
+from urllib.parse import unquote
 
 load_dotenv()
 
@@ -284,33 +285,38 @@ def add_match():
 
         if request.method == 'POST':
             data = request.form
-            print(f"Form Data: {data}")
+            print(f"Raw Form Data: {data}")
 
-            player1_id = get_id_by_name("Players", data['player1_name'], "player_id")
+            decoded_data = {}
+            for key, value in data.items():
+                decoded_data[key] = unquote(value)
+            print(f"Decoded Form Data: {decoded_data}")
+
+            player1_id = get_id_by_name("Players", decoded_data['player1_name'], "player_id")
             if player1_id is None:
-                return f"Invalid Player 1: {data['player1_name']}", 400
+                return f"Invalid Player 1: {decoded_data['player1_name']}", 400
 
-            player2_id = get_id_by_name("Players", data['player2_name'], "player_id")
+            player2_id = get_id_by_name("Players", decoded_data['player2_name'], "player_id")
             if player2_id is None:
-                return f"Invalid Player 2: {data['player2_name']}", 400
+                return f"Invalid Player 2: {decoded_data['player2_name']}", 400
 
-            p1_combo_id = get_id_by_name("BeybladeCombinations", data['player1_combination_name'], "combination_id")
+            p1_combo_id = get_id_by_name("BeybladeCombinations", decoded_data['player1_combination_name'], "combination_id")
             if p1_combo_id is None:
-                return f"Invalid Player 1 Combination: {data['player1_combination_name']}", 400
+                return f"Invalid Player 1 Combination: {decoded_data['player1_combination_name']}", 400
 
-            p2_combo_id = get_id_by_name("BeybladeCombinations", data['player2_combination_name'], "combination_id")
+            p2_combo_id = get_id_by_name("BeybladeCombinations", decoded_data['player2_combination_name'], "combination_id")
             if p2_combo_id is None:
-                return f"Invalid Player 2 Combination: {data['player2_combination_name']}", 400
+                return f"Invalid Player 2 Combination: {decoded_data['player2_combination_name']}", 400
 
-            p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'], "launcher_id")
+            p1_launcher_id = get_id_by_name("LauncherTypes", decoded_data['player1_launcher_name'], "launcher_id")
             if p1_launcher_id is None:
-                return f"Invalid Player 1 Launcher: {data['player1_launcher_name']}", 400
+                return f"Invalid Player 1 Launcher: {decoded_data['player1_launcher_name']}", 400
 
-            p2_launcher_id = get_id_by_name("LauncherTypes", data['player2_launcher_name'], "launcher_id")
+            p2_launcher_id = get_id_by_name("LauncherTypes", decoded_data['player2_launcher_name'], "launcher_id")
             if p2_launcher_id is None:
-                return f"Invalid Player 2 Launcher: {data['player2_launcher_name']}", 400
+                return f"Invalid Player 2 Launcher: {decoded_data['player2_launcher_name']}", 400
 
-            tournament_id = data.get('tournament_id')
+            tournament_id = decoded_data.get('tournament_id')
             if tournament_id == "":
                 tournament_id = None
             else:
@@ -320,24 +326,24 @@ def add_match():
                     return "Invalid Tournament ID", 400
 
             winner_id = None
-            if data['finish_type'] != "Draw":
-                winner_id = get_id_by_name("Players", data['winner_name'], "player_id")
+            if decoded_data['finish_type'] != "Draw":
+                winner_id = get_id_by_name("Players", decoded_data['winner_name'], "player_id")
                 if winner_id is None:
-                    return f"Invalid Winner: {data['winner_name']}", 400
+                    return f"Invalid Winner: {decoded_data['winner_name']}", 400
 
             try:
-                if data['finish_type'] == "Draw":
+                if decoded_data['finish_type'] == "Draw":
                     sql = """
                         INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, finish_type, match_time)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
-                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, data['finish_type'], datetime.now())
+                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, decoded_data['finish_type'], datetime.now())
                 else:
                     sql = """
                         INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
-                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.now())
+                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now())
 
                 print(f"Executing SQL: {sql} with values: {val}")
                 cursor.execute(sql, val)
