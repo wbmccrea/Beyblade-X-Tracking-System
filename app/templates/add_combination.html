@@ -21,21 +21,21 @@
         <label for="blade_name">Blade:</label><br>
         <select id="blade_name" name="blade_name" required>
             {% for blade in blades %}
-            <option value="{{ blade[0] }}">{{ blade[0] }}</option>
+            <option value="{{ blade['name'] }}">{{ blade['name'] }}</option> {# Access name from dictionary #}
             {% endfor %}
         </select><br><br>
 
         <label for="ratchet_name">Ratchet:</label><br>
         <select id="ratchet_name" name="ratchet_name" required>
             {% for ratchet in ratchets %}
-            <option value="{{ ratchet[0] }}">{{ ratchet[0] }}</option>
+            <option value="{{ ratchet['name'] }}">{{ ratchet['name'] }}</option> {# Access name from dictionary #}
             {% endfor %}
         </select><br><br>
 
         <label for="bit_name">Bit:</label><br>
         <select id="bit_name" name="bit_name" required>
             {% for bit in bits %}
-            <option value="{{ bit[0] }}">{{ bit[0] }}</option>
+            <option value="{{ bit['name'] }}">{{ bit['name'] }}</option> {# Access name from dictionary #}
             {% endfor %}
         </select><br><br>
 

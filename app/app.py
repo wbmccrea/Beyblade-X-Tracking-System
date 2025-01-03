@@ -212,11 +212,11 @@ def add_combination():
 
     try:
         cursor.execute("SELECT blade_name FROM Blades")
-        blades = [row[0] for row in cursor.fetchall()]  # Store as a simple list
+        blades = [{"name": row[0]} for row in cursor.fetchall()]  # List of dictionaries
         cursor.execute("SELECT ratchet_name FROM Ratchets")
-        ratchets = [row[0] for row in cursor.fetchall()]
+        ratchets = [{"name": row[0]} for row in cursor.fetchall()]
         cursor.execute("SELECT bit_name FROM Bits")
-        bits = [row[0] for row in cursor.fetchall()]
+        bits = [{"name": row[0]} for row in cursor.fetchall()]
 
         if request.method == 'POST':
             data = request.form
