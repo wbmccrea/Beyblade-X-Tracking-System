@@ -335,11 +335,11 @@ def add_match():
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
-    player_list = []
-    combination_list = []
-    launcher_list = []
-    tournament_list = []
-    message = None  # Initialize message
+    players = []
+    combinations = []
+    launchers = []
+    tournaments = []
+    message = None
     player1_selected = None
     player2_selected = None
     p1_combo_selected = None
@@ -371,18 +371,16 @@ def add_match():
 
         try:
             cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
-            tournaments = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
+            tournaments = [{"tournament_name": t[0], "tournament_id": t[1]} for t in cursor.fetchall()]
         except mysql.connector.Error as e:
             logger.debug(f"Error retrieving tournaments: {e}")
 
+
         if request.method == 'POST':
             data = request.form
-            logger.debug(f"Raw Form Data: {data}")
-
             decoded_data = {}
             for key, value in data.items():
                 decoded_data[key] = unquote(value)
-            logger.debug(f"Decoded Form Data: {decoded_data}")
 
             player1_id = get_id_by_name("Players", decoded_data['player1_name'], "player_id")
             player2_id = get_id_by_name("Players", decoded_data['player2_name'], "player_id")
@@ -418,12 +416,10 @@ def add_match():
                     """
                     val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now())
 
-                logger.debug(f"Executing SQL: {sql} with values: {val}")
                 cursor.execute(sql, val)
                 conn.commit()
 
                 message = "Match added successfully!"
-
                 player1_selected = decoded_data.get('player1_name')
                 player2_selected = decoded_data.get('player2_name')
                 p1_combo_selected = decoded_data.get('player1_combination_name')
@@ -444,7 +440,7 @@ def add_match():
         if conn:
             conn.close()
 
-    return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected)
+    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected)
 
 @app.route('/')  # Route for the landing page
 def index():
