@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request, render_template
 from datetime import datetime
 from urllib.parse import unquote
 import logging
+from collections import Counter
 
 load_dotenv()
 
@@ -449,16 +450,31 @@ def index():
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
 
-@app.route('/tournaments/stats')
+@app.route('/tournaments/stats', methods=['GET'])
 def tournament_stats():
     conn = get_db_connection()
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
+
     tournaments = []
+    all_tournaments = []
+    tournament_stats = None
+    overall_standings = []
+    selected_tournament = request.args.get('tournament', None)
 
     try:
-        cursor.execute("""
+        # Get all tournaments for the dropdown (always needed)
+        cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
+        all_tournaments = [{"name": t[0], "id": t[1]} for t in cursor.fetchall()]
+
+        # Construct WHERE clause for filtering
+        where_clause = ""
+        if selected_tournament:
+            where_clause = f"WHERE t.tournament_id = {selected_tournament}"
+
+        # Get Tournament and Match Data
+        cursor.execute(f"""
             SELECT t.tournament_name, t.start_date, t.end_date, m.match_id,
                    p1.player_name AS player1_name, p2.player_name AS player2_name,
                    bc1.combination_name AS player1_combination, bc2.combination_name AS player2_combination,
@@ -473,12 +489,12 @@ def tournament_stats():
             LEFT JOIN LauncherTypes lt1 on m.player1_launcher_id = lt1.launcher_id
             LEFT JOIN LauncherTypes lt2 on m.player2_launcher_id = lt2.launcher_id
             LEFT JOIN Players w ON m.winner_id = w.player_id
+            {where_clause}
             ORDER BY t.start_date DESC
         """)
-
         results = cursor.fetchall()
 
-        # Process the results to group matches by tournament
+        # Process Tournament and Match Data
         tournaments_data = {}
         for row in results:
             tournament_name, start_date, end_date, match_id, player1_name, player2_name, player1_combination, player2_combination, player1_launcher, player2_launcher, finish_type, winner_name, match_time = row
@@ -488,7 +504,7 @@ def tournament_stats():
                     "end_date": end_date,
                     "matches": []
                 }
-            if match_id: #check if the match exists
+            if match_id:
                 tournaments_data[tournament_name]["matches"].append({
                     "match_id": match_id,
                     "player1": player1_name,
@@ -503,6 +519,21 @@ def tournament_stats():
                 })
         tournaments = [{"name": name, "details": details} for name, details in tournaments_data.items()]
 
+        if selected_tournament and tournaments_data:
+            tournament_name = list(tournaments_data.keys())[0]  # Get the selected tournament name
+            tournament_details = tournaments_data[tournament_name]
+            tournament_stats = calculate_tournament_stats(tournament_details)
+        
+        #Overall Standings
+        cursor.execute("""
+            SELECT p.player_name, COUNT(m.winner_id) AS wins
+            FROM Players p
+            LEFT JOIN Matches m ON p.player_id = m.winner_id
+            GROUP BY p.player_name
+            ORDER BY wins DESC
+        """)
+        overall_standings = [{"player": row[0], "wins": row[1]} for row in cursor.fetchall()]
+
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
         return f"Database error: {e}", 500
@@ -510,4 +541,43 @@ def tournament_stats():
         if conn:
             conn.close()
 
-    return render_template('tournament_stats.html', tournaments=tournaments)
+    return render_template('tournament_stats.html', tournaments=tournaments, all_tournaments=all_tournaments, selected_tournament=selected_tournament, tournament_stats=tournament_stats, overall_standings=overall_standings)
+
+def calculate_tournament_stats(tournament):
+    matches = tournament["matches"]
+    player_wins = Counter()
+    combination_wins = Counter()
+    launchers_used = Counter()
+    players = set()
+    combinations = set()
+
+    for match in matches:
+        players.add(match["player1"])
+        players.add(match["player2"])
+        combinations.add(match["player1_combination"])
+        combinations.add(match["player2_combination"])
+        launchers_used[(match["player1"], match["player1_launcher"])] +=1
+        launchers_used[(match["player2"], match["player2_launcher"])] +=1
+        if match["winner"] != "Draw":
+            player_wins[match["winner"]] += 1
+            if match["winner"] == match["player1"]:
+                combination_wins[match["player1_combination"]] += 1
+            else:
+                combination_wins[match["player2_combination"]] += 1
+    
+    winning_player_by_wins = player_wins.most_common(1)[0] if player_wins else None
+    winning_combination_by_wins = combination_wins.most_common(1)[0] if combination_wins else None
+    most_common_combination = combination_wins.most_common(1)[0] if combination_wins else None
+    most_common_launcher = launchers_used.most_common(1)[0] if launchers_used else None
+
+
+    return {
+        "num_players": len(players),
+        "num_combinations": len(combinations),
+        "player_wins": player_wins,
+        "combination_wins": combination_wins,
+        "winning_player_by_wins": winning_player_by_wins,
+        "winning_combination_by_wins": winning_combination_by_wins,
+        "most_common_combination": most_common_combination,
+        "most_common_launcher": most_common_launcher
+    }
