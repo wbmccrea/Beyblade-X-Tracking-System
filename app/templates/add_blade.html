@@ -7,13 +7,13 @@
     <h1>Add Blade</h1>
     <form method="POST">
         <label for="blade_name">Blade Name:</label><br>
-        <input type="text" id="blade_name" name="blade_name"><br><br>
+        <input type="text" id="blade_name" name="blade_name" required><br><br>
 
         <label for="canonical_name">Canonical Name:</label><br>
         <input type="text" id="canonical_name" name="canonical_name"><br><br>
 
         <label for="blade_type">Blade Type:</label><br>
-        <select id="blade_type" name="blade_type">
+        <select id="blade_type" name="blade_type" required>
             <option value="Attack">Attack</option>
             <option value="Defense">Defense</option>
             <option value="Stamina">Stamina</option>
@@ -22,14 +22,26 @@
         </select><br><br>
 
         <label for="spin_direction">Spin Direction:</label><br>
-        <select id="spin_direction" name="spin_direction">
+        <select id="spin_direction" name="spin_direction" required>
             <option value="Right-Spin">Right-Spin</option>
             <option value="Left-Spin">Left-Spin</option>
             <option value="Dual-Spin">Dual-Spin</option>
         </select><br><br>
 
-        <label for="blade_weight">Blade Weight:</label><br>
-        <input type="number" step="0.1" id="blade_weight" name="blade_weight"><br><br>
+        <label for="blade_weight">Blade Weight (grams):</label><br>
+        <input type="number" step="0.01" id="blade_weight" name="blade_weight"><br><br>
+
+        <label for="attack">Attack:</label><br>
+        <input type="number" id="attack" name="attack" value="0"><br><br>
+
+        <label for="defense">Defense:</label><br>
+        <input type="number" id="defense" name="defense" value="0"><br><br>
+
+        <label for="stamina">Stamina:</label><br>
+        <input type="number" id="stamina" name="stamina" value="0"><br><br>
+
+        <label for="weight">Weight:</label><br>
+        <input type="number" id="weight" name="weight" value="0"><br><br>
 
         <input type="submit" value="Submit">
     </form>

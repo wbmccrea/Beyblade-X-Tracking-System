@@ -81,13 +81,28 @@ def add_blade():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
+            weight = float(data.get('blade_weight', 0.0))
             cursor.execute("INSERT INTO Blades (blade_name, canonical_name, blade_type, spin_direction, blade_weight) VALUES (%s, %s, %s, %s, %s)",
-                           (data['blade_name'], data.get('canonical_name'), data['blade_type'], data['spin_direction'], data.get('blade_weight')))
+                           (data['blade_name'], data.get('canonical_name'), data['blade_type'], data['spin_direction'], weight))
+            blade_id = cursor.lastrowid
+
+            attack = int(data.get('attack', 0))
+            defense = int(data.get('defense', 0))
+            stamina = int(data.get('stamina', 0))
+            weight_stat = int(data.get('weight', 0))
+
+            cursor.execute("""
+                INSERT INTO BladeStats (blade_id, attack, defense, stamina, weight)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (blade_id, attack, defense, stamina, weight_stat))
+
             conn.commit()
             conn.close()
             return "Blade added successfully!"
         except mysql.connector.Error as e:
-            conn.close()
+            if conn:
+                conn.rollback()
+                conn.close()
             return f"Error adding blade: {e}", 400
     return render_template('add_blade.html')
 
@@ -100,13 +115,28 @@ def add_ratchet():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
+            weight = float(data.get('ratchet_weight', 0.0))
             cursor.execute("INSERT INTO Ratchets (ratchet_name, ratchet_protrusions, ratchet_height, ratchet_weight) VALUES (%s, %s, %s, %s)",
-                           (data['ratchet_name'], data.get('ratchet_protrusions'), data.get('ratchet_height'), data.get('ratchet_weight')))
+                           (data['ratchet_name'], data['ratchet_protrusions'], data['ratchet_height'], weight))
+            ratchet_id = cursor.lastrowid
+
+            attack = int(data.get('attack', 0))
+            defense = int(data.get('defense', 0))
+            stamina = int(data.get('stamina', 0))
+            click_strength = int(data.get('click_strength', 0))
+
+            cursor.execute("""
+                INSERT INTO RatchetStats (ratchet_id, attack, defense, stamina, click_strength)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ratchet_id, attack, defense, stamina, click_strength))
+
             conn.commit()
             conn.close()
             return "Ratchet added successfully!"
         except mysql.connector.Error as e:
-            conn.close()
+            if conn:
+                conn.rollback()
+                conn.close()
             return f"Error adding ratchet: {e}", 400
     return render_template('add_ratchet.html')
 
@@ -119,13 +149,32 @@ def add_bit():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            cursor.execute("INSERT INTO Bits (bit_name, bit_weight) VALUES (%s, %s)",
-                           (data['bit_name'], data.get('bit_weight')))
+            weight = float(data.get('bit_weight', 0.0))
+            bit_type = data['bit_type']
+
+            cursor.execute("INSERT INTO Bits (bit_name, bit_weight, bit_type) VALUES (%s, %s, %s)",
+                           (data['bit_name'], weight, bit_type))
+            bit_id = cursor.lastrowid
+
+            # Insert stats into BitStats (handle missing values with .get and default to 0)
+            attack = int(data.get('attack', 0))
+            defense = int(data.get('defense', 0))
+            stamina = int(data.get('stamina', 0))
+            dash = int(data.get('dash', 0))
+            burst_resistance = int(data.get('burst_resistance', 0))
+
+            cursor.execute("""
+                INSERT INTO BitStats (bit_id, attack, defense, stamina, dash, burst_resistance)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (bit_id, attack, defense, stamina, dash, burst_resistance))
+
             conn.commit()
             conn.close()
-            return "Bit added successfully!"
+            return "Bit and stats added successfully!"
         except mysql.connector.Error as e:
-            conn.close()
+            if conn:
+                conn.rollback()
+                conn.close()
             return f"Error adding bit: {e}", 400
     return render_template('add_bit.html')
 
