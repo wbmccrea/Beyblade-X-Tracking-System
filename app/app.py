@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import mysql.connector
 from flask import Flask, jsonify, request, render_template
+from datetime import datetime
 
 load_dotenv()
 
@@ -202,25 +203,36 @@ if __name__ == '__main__':
 def add_tournament():
     if request.method == 'POST':
         data = request.form
+
         conn = get_db_connection()
         if conn is None:
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%dT%H:%M')
-            end_date = datetime.datetime.strptime(data['end_date'], '%Y-%m-%dT%H:%M')
+            # Attempt to parse date strings
+            try:
+                start_date = datetime.strptime(data['start_date'], '%Y-%m-%dT%H:%M')
+                print(f"Start Date (parsed): {start_date}")
+            except ValueError as ve:
+                print(f"Invalid start date format: {ve}")
+                return "Invalid start date format. Please use YYYY-MM-DD HH:MM:SS", 400
 
+            try:
+                end_date = datetime.strptime(data['end_date'], '%Y-%m-%dT%H:%M')
+                print(f"End Date (parsed): {end_date}")
+            except ValueError as ve:
+                print(f"Invalid end date format: {ve}")
+                return "Invalid end date format. Please use YYYY-MM-DD HH:MM:SS", 400
+
+            # Insert tournament data (assuming validation for other fields)
             cursor.execute("INSERT INTO Tournaments (tournament_name, start_date, end_date) VALUES (%s, %s, %s)",
                            (data['tournament_name'], start_date, end_date))
             conn.commit()
             conn.close()
             return "Tournament added successfully!"
         except mysql.connector.Error as e:
-            conn.close()
-            return f"Error adding tournament: {e}", 400
-        except ValueError:
-            conn.close()
-            return "Invalid date format. Please use YYYY-MM-DD HH:MM:SS", 400
+            print(f"Database Error: {e}")  # Print the full error for debugging
+            return f"Error adding tournament: {e}", 500  # Return user-friendly error message
     return render_template('add_tournament.html')
 
 if __name__ == '__main__':
