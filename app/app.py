@@ -36,31 +36,39 @@ def get_db_connection():
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
     if conn is None:
-        logger.debug("get_id_by_name: Database connection failed")
+        logger.error("get_id_by_name: Database connection failed")
         return None
     cursor = conn.cursor()
     try:
         name = name.strip()
-        logger.debug(f"get_id_by_name: Looking for '{name}' in table '{table}'")
-        # Make the comparison case-insensitive using LOWER()
-        query = f"SELECT {id_column} FROM {table} WHERE LOWER(name) = LOWER(%s)"
-        logger.debug(f"get_id_by_name: Executing query: {query} with name: {name}")
+        logger.info(f"get_id_by_name: Looking for '{name}' in table '{table}'")
+
+        if table == "Players":
+            name_column = "player_name"
+        elif table == "BeybladeCombinations":
+            name_column = "combination_name"
+        elif table == "LauncherTypes":
+            name_column = "launcher_name"
+        else:
+            logger.error(f"get_id_by_name: Invalid table name: {table}")
+            return None
+
+        query = f"SELECT {id_column} FROM {table} WHERE LOWER({name_column}) = LOWER(%s)" # Use name_column
+        logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
         cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
-            logger.debug(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
+            logger.info(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
             return result[0]
         else:
-            logger.debug(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
+            logger.info(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
             return None
     except mysql.connector.Error as e:
-        logger.debug(f"get_id_by_name: Database error: {e}")
+        logger.exception(f"get_id_by_name: Database error: {e}")
         return None
     finally:
         if conn:
             conn.close()
-
-
 
 # Web routes for adding components and combinations
 
