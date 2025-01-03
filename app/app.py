@@ -151,12 +151,12 @@ def add_bit():
         try:
             weight = float(data.get('bit_weight', 0.0))
             bit_type = data['bit_type']
+            full_bit_name = data['full_bit_name'] #get full bit name
 
-            cursor.execute("INSERT INTO Bits (bit_name, bit_weight, bit_type) VALUES (%s, %s, %s)",
-                           (data['bit_name'], weight, bit_type))
+            cursor.execute("INSERT INTO Bits (bit_name, full_bit_name, bit_weight, bit_type) VALUES (%s, %s, %s, %s)", #add full_bit_name to insert
+                           (data['bit_name'], full_bit_name, weight, bit_type))
             bit_id = cursor.lastrowid
 
-            # Insert stats into BitStats (handle missing values with .get and default to 0)
             attack = int(data.get('attack', 0))
             defense = int(data.get('defense', 0))
             stamina = int(data.get('stamina', 0))
