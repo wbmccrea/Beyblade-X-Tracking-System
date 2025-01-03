@@ -335,10 +335,10 @@ def add_match():
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
-    player_list =
-    combination_list =
-    launcher_list =
-    tournament_list =
+    player_list = []
+    combination_list = []
+    launcher_list = []
+    tournament_list = []
     message = None  # Initialize message
     player1_selected = None
     player2_selected = None
