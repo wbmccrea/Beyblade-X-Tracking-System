@@ -81,20 +81,25 @@ def add_blade():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            weight = float(data.get('blade_weight', 0.0))
-            cursor.execute("INSERT INTO Blades (blade_name, canonical_name, blade_type, spin_direction, blade_weight) VALUES (%s, %s, %s, %s, %s)",
-                           (data['blade_name'], data.get('canonical_name'), data['blade_type'], data['spin_direction'], weight))
+            blade_name = data['blade_name']
+            canonical_name = data.get('canonical_name')
+            blade_type = data['blade_type']
+            spin_direction = data['spin_direction']
+
+            cursor.execute("INSERT INTO Blades (blade_name, canonical_name, blade_type, spin_direction) VALUES (%s, %s, %s, %s)",
+                           (blade_name, canonical_name, blade_type, spin_direction)) #Removed weight from insert
             blade_id = cursor.lastrowid
 
-            attack = int(data.get('attack', 0))
-            defense = int(data.get('defense', 0))
-            stamina = int(data.get('stamina', 0))
-            weight_stat = int(data.get('weight', 0))
+            if any(data.get(stat) for stat in ['attack', 'defense', 'stamina', 'weight']):
+                attack = int(data.get('attack', 0)) if data.get('attack') else None
+                defense = int(data.get('defense', 0)) if data.get('defense') else None
+                stamina = int(data.get('stamina', 0)) if data.get('stamina') else None
+                weight_stat = int(data.get('weight', 0)) if data.get('weight') else None
 
-            cursor.execute("""
-                INSERT INTO BladeStats (blade_id, attack, defense, stamina, weight)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (blade_id, attack, defense, stamina, weight_stat))
+                cursor.execute("""
+                    INSERT INTO BladeStats (blade_id, attack, defense, stamina, weight)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (blade_id, attack, defense, stamina, weight_stat))
 
             conn.commit()
             conn.close()
@@ -149,24 +154,31 @@ def add_bit():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            weight = float(data.get('bit_weight', 0.0))
+            bit_name = data['bit_name']
+            full_bit_name = data['full_bit_name']
             bit_type = data['bit_type']
-            full_bit_name = data['full_bit_name'] #get full bit name
 
-            cursor.execute("INSERT INTO Bits (bit_name, full_bit_name, bit_weight, bit_type) VALUES (%s, %s, %s, %s)", #add full_bit_name to insert
-                           (data['bit_name'], full_bit_name, weight, bit_type))
+            try:
+                weight = float(data['bit_weight']) if data.get('bit_weight') else None
+            except ValueError:
+                return "Invalid weight value. Please enter a number.", 400
+            
+            cursor.execute("INSERT INTO Bits (bit_name, full_bit_name, bit_weight, bit_type) VALUES (%s, %s, %s, %s)",
+                           (bit_name, full_bit_name, weight, bit_type))
             bit_id = cursor.lastrowid
 
-            attack = int(data.get('attack', 0))
-            defense = int(data.get('defense', 0))
-            stamina = int(data.get('stamina', 0))
-            dash = int(data.get('dash', 0))
-            burst_resistance = int(data.get('burst_resistance', 0))
+            # Insert stats only if they are provided
+            if any(data.get(stat) for stat in ['attack', 'defense', 'stamina', 'dash', 'burst_resistance']):
+                attack = int(data.get('attack', 0)) if data.get('attack') else None
+                defense = int(data.get('defense', 0)) if data.get('defense') else None
+                stamina = int(data.get('stamina', 0)) if data.get('stamina') else None
+                dash = int(data.get('dash', 0)) if data.get('dash') else None
+                burst_resistance = int(data.get('burst_resistance', 0)) if data.get('burst_resistance') else None
 
-            cursor.execute("""
-                INSERT INTO BitStats (bit_id, attack, defense, stamina, dash, burst_resistance)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (bit_id, attack, defense, stamina, dash, burst_resistance))
+                cursor.execute("""
+                    INSERT INTO BitStats (bit_id, attack, defense, stamina, dash, burst_resistance)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (bit_id, attack, defense, stamina, dash, burst_resistance))
 
             conn.commit()
             conn.close()
