@@ -203,7 +203,7 @@ def add_bit():
             return f"Error adding bit: {e}", 400
     return render_template('add_bit.html')
 
-@@app.route('/add_combination', methods=['GET', 'POST'])
+@app.route('/add_combination', methods=['GET', 'POST'])
 def add_combination():
     conn = get_db_connection()
     if conn is None:
