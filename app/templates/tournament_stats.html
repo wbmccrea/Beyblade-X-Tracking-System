@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tournament Stats</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tournament Statistics</h1>
+
+    {% if tournaments %}
+        {% for tournament in tournaments %}
+            <h2>{{ tournament.name }}</h2>
+            <p>Start Date: {{ tournament.details.start_date }}</p>
+            <p>End Date: {{ tournament.details.end_date }}</p>
+
+            {% if tournament.details.matches %}
+                <h3>Matches:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Match ID</th>
+                            <th>Player 1</th>
+                            <th>Player 1 Combination</th>
+                            <th>Player 1 Launcher</th>
+                            <th>Player 2</th>
+                            <th>Player 2 Combination</th>
+                            <th>Player 2 Launcher</th>
+                            <th>Finish Type</th>
+                            <th>Winner</th>
+                            <th>Match Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in tournament.details.matches %}
+                            <tr>
+                                <td>{{ match.match_id }}</td>
+                                <td>{{ match.player1 }}</td>
+                                <td>{{ match.player1_combination }}</td>
+                                <td>{{ match.player1_launcher }}</td>
+                                <td>{{ match.player2 }}</td>
+                                <td>{{ match.player2_combination }}</td>
+                                <td>{{ match.player2_launcher }}</td>
+                                <td>{{ match.finish_type }}</td>
+                                <td>{{ match.winner }}</td>
+                                <td>{{ match.match_time }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No matches recorded for this tournament.</p>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p>No tournaments recorded.</p>
+    {% endif %}
+
+</body>
+</html>

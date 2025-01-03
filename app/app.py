@@ -448,3 +448,66 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
+
+@app.route('/tournaments/stats')
+def tournament_stats():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
+    tournaments = []
+
+    try:
+        cursor.execute("""
+            SELECT t.tournament_name, t.start_date, t.end_date, m.match_id,
+                   p1.player_name AS player1_name, p2.player_name AS player2_name,
+                   bc1.combination_name AS player1_combination, bc2.combination_name AS player2_combination,
+                    lt1.launcher_name as player1_launcher, lt2.launcher_name as player2_launcher,
+                   m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time
+            FROM Tournaments t
+            LEFT JOIN Matches m ON t.tournament_id = m.tournament_id
+            LEFT JOIN Players p1 ON m.player1_id = p1.player_id
+            LEFT JOIN Players p2 ON m.player2_id = p2.player_id
+            LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
+            LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
+            LEFT JOIN LauncherTypes lt1 on m.player1_launcher_id = lt1.launcher_id
+            LEFT JOIN LauncherTypes lt2 on m.player2_launcher_id = lt2.launcher_id
+            LEFT JOIN Players w ON m.winner_id = w.player_id
+            ORDER BY t.start_date DESC
+        """)
+
+        results = cursor.fetchall()
+
+        # Process the results to group matches by tournament
+        tournaments_data = {}
+        for row in results:
+            tournament_name, start_date, end_date, match_id, player1_name, player2_name, player1_combination, player2_combination, player1_launcher, player2_launcher, finish_type, winner_name, match_time = row
+            if tournament_name not in tournaments_data:
+                tournaments_data[tournament_name] = {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "matches": []
+                }
+            if match_id: #check if the match exists
+                tournaments_data[tournament_name]["matches"].append({
+                    "match_id": match_id,
+                    "player1": player1_name,
+                    "player2": player2_name,
+                    "player1_combination": player1_combination,
+                    "player2_combination": player2_combination,
+                    "player1_launcher":player1_launcher,
+                    "player2_launcher":player2_launcher,
+                    "finish_type": finish_type,
+                    "winner": winner_name,
+                    "match_time": match_time
+                })
+        tournaments = [{"name": name, "details": details} for name, details in tournaments_data.items()]
+
+    except mysql.connector.Error as e:
+        logger.error(f"Database error: {e}")
+        return f"Database error: {e}", 500
+    finally:
+        if conn:
+            conn.close()
+
+    return render_template('tournament_stats.html', tournaments=tournaments)
