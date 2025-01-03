@@ -207,8 +207,8 @@ def add_tournament():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d %H:%M:%S')
-            end_date = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d %H:%M:%S')
+            start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%dT%H:%M')
+            end_date = datetime.datetime.strptime(data['end_date'], '%Y-%m-%dT%H:%M')
 
             cursor.execute("INSERT INTO Tournaments (tournament_name, start_date, end_date) VALUES (%s, %s, %s)",
                            (data['tournament_name'], start_date, end_date))
