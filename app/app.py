@@ -4,8 +4,14 @@ import mysql.connector
 from flask import Flask, jsonify, request, render_template
 from datetime import datetime
 from urllib.parse import unquote
+import logging
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)  # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+logger = logging.getLogger(__name__) #get a logger object
+
 
 app = Flask(__name__)
 
