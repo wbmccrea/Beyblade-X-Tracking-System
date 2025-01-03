@@ -120,20 +120,29 @@ def add_ratchet():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            weight = float(data.get('ratchet_weight', 0.0))
+            ratchet_name = data['ratchet_name']
+            ratchet_protrusions = data['ratchet_protrusions']
+            ratchet_base_height = data['ratchet_height']
+
+            try:
+                weight = float(data['ratchet_weight']) if data.get('ratchet_weight') else None
+            except ValueError:
+                return "Invalid weight value. Please enter a number.", 400
+
             cursor.execute("INSERT INTO Ratchets (ratchet_name, ratchet_protrusions, ratchet_height, ratchet_weight) VALUES (%s, %s, %s, %s)",
-                           (data['ratchet_name'], data['ratchet_protrusions'], data['ratchet_height'], weight))
+                           (ratchet_name, ratchet_protrusions, ratchet_base_height, weight))
             ratchet_id = cursor.lastrowid
 
-            attack = int(data.get('attack', 0))
-            defense = int(data.get('defense', 0))
-            stamina = int(data.get('stamina', 0))
-            click_strength = int(data.get('click_strength', 0))
+            if any(data.get(stat) for stat in ['attack', 'defense', 'stamina', 'height']):
+                attack = int(data.get('attack', 0)) if data.get('attack') else None
+                defense = int(data.get('defense', 0)) if data.get('defense') else None
+                stamina = int(data.get('stamina', 0)) if data.get('stamina') else None
+                height = int(data.get('height', 0)) if data.get('height') else None #get height
 
-            cursor.execute("""
-                INSERT INTO RatchetStats (ratchet_id, attack, defense, stamina, click_strength)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (ratchet_id, attack, defense, stamina, click_strength))
+                cursor.execute("""
+                    INSERT INTO RatchetStats (ratchet_id, attack, defense, stamina, height)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (ratchet_id, attack, defense, stamina, height)) #insert height
 
             conn.commit()
             conn.close()
