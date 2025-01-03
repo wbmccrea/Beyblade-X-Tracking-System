@@ -29,21 +29,24 @@ def get_db_connection():
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
     if conn is None:
+        print("get_id_by_name: Database connection failed")
         return None
     cursor = conn.cursor()
     try:
         name = name.strip()
-        print(f"Looking for '{name}' in table '{table}'")
-        cursor.execute(f"SELECT {id_column} FROM {table} WHERE name = %s", (name,))
+        print(f"get_id_by_name: Looking for '{name}' in table '{table}'")
+        query = f"SELECT {id_column} FROM {table} WHERE name = %s"
+        print(f"get_id_by_name: Executing query: {query} with name: {name}") # print the query being executed
+        cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
-            print(f"Found {id_column}: {result[0]} for '{name}'")
+            print(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
             return result[0]
         else:
-            print(f"No '{id_column}' found for '{name}' in table '{table}'")
+            print(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
             return None
     except mysql.connector.Error as e:
-        print(f"Database error in get_id_by_name: {e}")
+        print(f"get_id_by_name: Database error: {e}")
         return None
     finally:
         if conn:
