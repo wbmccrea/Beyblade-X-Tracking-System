@@ -240,153 +240,86 @@ if __name__ == '__main__':
 
 @app.route('/add_match', methods=['GET', 'POST'])
 def add_match():
-    conn = get_db_connection()
-    if conn is None:
-        return "Database connection error", 500
-    cursor = conn.cursor()
-    player_list = []
-    combination_list = []
-    launcher_list = []
-    tournament_list = []
+    # ... (connection and cursor setup)
 
     try:
-        try:
-            cursor.execute("SELECT player_name FROM Players")
-            players = cursor.fetchall()
-            player_list = [{"player_name": player[0]} for player in players]
-        except mysql.connector.Error as e:
-            print(f"Error retrieving players: {e}")
+        # ... (retrieving player, combination, launcher, and tournament lists)
 
-        try:
-            cursor.execute("SELECT combination_name FROM BeybladeCombinations")
-            combinations = cursor.fetchall()
-            combination_list = [{"combination_name": combo[0]} for combo in combinations]
-        except mysql.connector.Error as e:
-            print(f"Error retrieving combinations: {e}")
-
-        try:
-            cursor.execute("SELECT launcher_name FROM LauncherTypes")
-            launchers = cursor.fetchall()
-            launcher_list = [{"launcher_name": launcher[0]} for launcher in launchers]
-        except mysql.connector.Error as e:
-            print(f"Error retrieving launchers: {e}")
-
-        try:
-            cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
-            tournaments = cursor.fetchall()
-            tournament_list = [{"tournament_name": t[0], "tournament_id": t[1]} for t in tournaments]
-        except mysql.connector.Error as e:
-            print(f"Error retrieving tournaments: {e}")
-        print("add_match route hit!") # Add this print statement
         if request.method == 'POST':
             data = request.form
             print(f"Form Data: {data}")
 
-            try:
-                player1_id = get_id_by_name("Players", data['player1_name'], "player_id")
-                print(f"Player 1 ID: {player1_id}")
-                if player1_id is None:
-                    print(f"Error: Player 1 '{data['player1_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving player 1 ID: {e}")
-                player1_id = None
+            # Retrieve IDs and check for None IMMEDIATELY
+            player1_id = get_id_by_name("Players", data['player1_name'], "player_id")
+            if player1_id is None:
+                return f"Invalid Player 1: {data['player1_name']}", 400
 
-            try:
-                player2_id = get_id_by_name("Players", data['player2_name'], "player_id")
-                print(f"Player 2 ID: {player2_id}")
-                if player2_id is None:
-                    print(f"Error: Player 2 '{data['player2_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving player 2 ID: {e}")
-                player2_id = None
+            player2_id = get_id_by_name("Players", data['player2_name'], "player_id")
+            if player2_id is None:
+                return f"Invalid Player 2: {data['player2_name']}", 400
 
-            try:
-                p1_combo_id = get_id_by_name("BeybladeCombinations", data['player1_combination_name'], "combination_id")
-                print(f"Player 1 Combo ID: {p1_combo_id}")
-                if p1_combo_id is None:
-                    print(f"Error: Combination 1 '{data['player1_combination_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving Player 1 Combo ID: {e}")
-                p1_combo_id = None
+            p1_combo_id = get_id_by_name("BeybladeCombinations", data['player1_combination_name'], "combination_id")
+            if p1_combo_id is None:
+                return f"Invalid Player 1 Combination: {data['player1_combination_name']}", 400
 
-            try:
-                p2_combo_id = get_id_by_name("BeybladeCombinations", data['player2_combination_name'], "combination_id")
-                print(f"Player 2 Combo ID: {p2_combo_id}")
-                if p2_combo_id is None:
-                    print(f"Error: Combination 2 '{data['player2_combination_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving Player 2 Combo ID: {e}")
-                p2_combo_id = None
+            p2_combo_id = get_id_by_name("BeybladeCombinations", data['player2_combination_name'], "combination_id")
+            if p2_combo_id is None:
+                return f"Invalid Player 2 Combination: {data['player2_combination_name']}", 400
 
-            try:
-                p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'], "launcher_id")
-                print(f"Player 1 Launcher ID: {p1_launcher_id}")
-                if p1_launcher_id is None:
-                    print(f"Error: Launcher 1 '{data['player1_launcher_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving Player 1 Launcher ID: {e}")
-                p1_launcher_id = None
+            p1_launcher_id = get_id_by_name("LauncherTypes", data['player1_launcher_name'], "launcher_id")
+            if p1_launcher_id is None:
+                return f"Invalid Player 1 Launcher: {data['player1_launcher_name']}", 400
 
-            try:
-                p2_launcher_id = get_id_by_name("LauncherTypes", data['player2_launcher_name'], "launcher_id")
-                print(f"Player 2 Launcher ID: {p2_launcher_id}")
-                if p2_launcher_id is None:
-                    print(f"Error: Launcher 2 '{data['player2_launcher_name']}' not found.")
-            except Exception as e:
-                print(f"Error retrieving Player 2 Launcher ID: {e}")
-                p2_launcher_id = None
+            p2_launcher_id = get_id_by_name("LauncherTypes", data['player2_launcher_name'], "launcher_id")
+            if p2_launcher_id is None:
+                return f"Invalid Player 2 Launcher: {data['player2_launcher_name']}", 400
 
             tournament_id = data.get('tournament_id')
-            print(f"Tournament ID (before conversion): {tournament_id}")
             if tournament_id == "":
                 tournament_id = None
-                print(f"Tournament ID (after conversion): {tournament_id}")
             else:
                 try:
                     tournament_id = int(tournament_id)
-                    print(f"Tournament ID (after conversion): {tournament_id}")
                 except ValueError:
                     return "Invalid Tournament ID", 400
 
-            if data['finish_type'] == "Draw":
-                winner_id = None
-                print("Winner ID: None (Draw)")
-            else:
-                try:
-                    winner_id = get_id_by_name("Players", data['winner_name'], "player_id")
-                    print(f"Winner ID: {winner_id}")
-                    if winner_id is None:
-                        print(f"Error: Winner '{data['winner_name']}' not found.")
-                except Exception as e:
-                    print(f"Error retrieving Winner ID: {e}")
-                    winner_id = None
+            winner_id = None
+            if data['finish_type'] != "Draw":
+                winner_id = get_id_by_name("Players", data['winner_name'], "player_id")
+                if winner_id is None:
+                    return f"Invalid Winner: {data['winner_name']}", 400
 
-            if not all([player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id]) or (data['finish_type'] != "Draw" and winner_id is None):
-                return "Invalid player, combination, launcher or winner name", 400
-
+            # Now that all IDs are validated, construct and execute the query
             try:
                 if data['finish_type'] == "Draw":
-                    cursor.execute("""
+                    sql = """
                         INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, finish_type, match_time)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, data['finish_type'], datetime.datetime.now()))
+                    """
+                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, data['finish_type'], datetime.now())
                 else:
-                    cursor.execute("""
+                    sql = """
                         INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.datetime.now()))
+                    """
+                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, data['finish_type'], datetime.now())
+
+                print(f"Executing SQL: {sql} with values: {val}")
+                cursor.execute(sql, val)
                 conn.commit()
                 return "Match added successfully!"
             except mysql.connector.Error as e:
-                return f"Error adding match: {e}", 400
-
-        return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list)
+                print(f"Database Error during insert: {e}")
+                return f"Error adding match: {e}", 500
 
     except mysql.connector.Error as e:
+        print(f"Database error: {e}", 500)
         return f"Database error: {e}", 500
     finally:
         if conn:
             conn.close()
+
+    return render_template('add_match.html', players=player_list, combinations=combination_list, launchers=launcher_list, tournaments=tournament_list)
 
 @app.route('/')  # Route for the landing page
 def index():
