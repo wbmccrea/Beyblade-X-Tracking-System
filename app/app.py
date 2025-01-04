@@ -730,13 +730,31 @@ def calculate_player_stats(player):
     opponents = Counter()
 
     for match in matches:
-        opponents[match["opponent"]] += 1
-        if match["winner"] == player["name"]:
+        if player["name"] == match["player1"]:  # Check if the player is player1
+            opponent = match["player2"]
+            if match["winner"] == match["player1"]:
+                result = "win"
+            elif match["winner"] == "Draw":
+                result = "draw"
+            else:
+                result = "loss"
+        elif player["name"] == match["player2"]:  # Check if the player is player2
+            opponent = match["player1"]
+            if match["winner"] == match["player2"]:
+                result = "win"
+            elif match["winner"] == "Draw":
+                result = "draw"
+            else:
+                result = "loss"
+        else:
+            continue #This should never happen
+
+        opponents[opponent] += 1
+
+        if result == "win":
             if match["finish_type"] == "Survivor":
                 points = 1
-            elif match["finish_type"] == "Burst":
-                points = 2
-            elif match["finish_type"] == "KO":
+            elif match["finish_type"] in ("Burst", "KO"): #combine burst and KO
                 points = 2
             elif match["finish_type"] == "Extreme":
                 points = 3
@@ -745,12 +763,14 @@ def calculate_player_stats(player):
             wins += 1
             total_points += points
             win_by_finish[match["finish_type"]] += 1
-        elif match["winner"] == "Draw":
+        elif result == "draw":
             draws += 1
-        else:
+        elif result == "loss":
             losses += 1
+
     win_rate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0
     most_frequent_opponent = opponents.most_common(1)[0] if opponents else None
+
     return {
         "wins": wins,
         "losses": losses,
@@ -758,7 +778,7 @@ def calculate_player_stats(player):
         "win_rate": win_rate,
         "win_by_finish": win_by_finish,
         "total_points": total_points,
-        "most_frequent_opponent":most_frequent_opponent
+        "most_frequent_opponent": most_frequent_opponent,
     }
 
 if __name__ == '__main__':
