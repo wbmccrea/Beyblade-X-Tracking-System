@@ -730,31 +730,20 @@ def calculate_player_stats(player):
     opponents = Counter()
 
     for match in matches:
-        if player["name"] == match["player1"]:  # Check if the player is player1
-            opponent = match["player2"]
-            if match["winner"] == match["player1"]:
-                result = "win"
-            elif match["winner"] == "Draw":
-                result = "draw"
-            else:
-                result = "loss"
-        elif player["name"] == match["player2"]:  # Check if the player is player2
-            opponent = match["player1"]
-            if match["winner"] == match["player2"]:
-                result = "win"
-            elif match["winner"] == "Draw":
-                result = "draw"
-            else:
-                result = "loss"
-        else:
-            continue #This should never happen
-
+        opponent = match["opponent"] # Correctly get the opponent
         opponents[opponent] += 1
+
+        if match["winner"] == player["name"]:
+            result = "win"
+        elif match["winner"] == "Draw":
+            result = "draw"
+        else:
+            result = "loss"
 
         if result == "win":
             if match["finish_type"] == "Survivor":
                 points = 1
-            elif match["finish_type"] in ("Burst", "KO"): #combine burst and KO
+            elif match["finish_type"] in ("Burst", "KO"):
                 points = 2
             elif match["finish_type"] == "Extreme":
                 points = 3
