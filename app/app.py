@@ -636,8 +636,142 @@ def calculate_tournament_stats(tournament):
         "player_points": sorted_player_points,
     }
 
-    }
+@app.route('/players/stats', methods=['GET'])
+def player_stats():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
 
+    players = []
+    all_players = []
+    player_stats = None
+    selected_player = request.args.get('player', None)
+
+    try:
+        # Get all players for the dropdown
+        try:
+            cursor.execute("SELECT player_name, player_id FROM Players")
+            all_players = [{"name": p[0], "id": p[1]} for p in cursor.fetchall()]
+        except mysql.connector.Error as e:
+            logger.error(f"Error retrieving players for dropdown: {e}")
+
+        # Construct WHERE clause for filtering
+        where_clause = ""
+        if selected_player:
+            where_clause = f"WHERE (m.player1_id = {selected_player} OR m.player2_id = {selected_player})"
+
+        # Get Player and Match Data (Corrected Query)
+        try:
+            cursor.execute(f"""
+                SELECT p.player_name, m.match_id,
+                       p1.player_name AS opponent_name,
+                       m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
+                       t.tournament_name
+                FROM Players p
+                LEFT JOIN Matches m ON (p.player_id = m.player1_id OR p.player_id = m.player2_id)
+                LEFT JOIN Players p1 ON (CASE WHEN p.player_id = m.player1_id THEN m.player2_id ELSE m.player1_id END) = p1.player_id
+                LEFT JOIN Players w ON m.winner_id = w.player_id
+                LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
+                {where_clause}
+                AND m.player1_id != m.player2_id  -- Exclude self-matches
+                ORDER BY m.match_time DESC
+            """)
+            results = cursor.fetchall()
+        except mysql.connector.Error as e:
+            logger.error(f"Error retrieving player/match data: {e}")
+            results = []
+
+        player_data = {}
+        for row in results:
+            player_name, match_id, opponent_name, finish_type, winner_name, match_time, tournament_name = row
+            if player_name not in player_data:
+                player_data[player_name] = {
+                    "matches": []
+                }
+            if match_id:
+                player_data[player_name]["matches"].append({
+                    "match_id": match_id,
+                    "opponent": opponent_name,
+                    "finish_type": finish_type,
+                    "winner": winner_name,
+                    "match_time": match_time,
+                    "tournament_name": tournament_name
+                })
+
+        players = []
+        for name, details in player_data.items():
+            players.append({"name": name, "details": details})
+
+        if selected_player and player_data:
+            player_name = list(player_data.keys())[0]
+            player_details = player_data[player_name]
+            player_details["name"] = player_name
+            player_stats = calculate_player_stats(player_details)
+            player_stats["name"] = player_name  # Add the name here!
+        else:
+            player_stats = None
+
+    except mysql.connector.Error as e:
+        logger.error(f"Outer database error: {e}")
+        return f"Database error: {e}", 500
+    finally:
+        if conn:
+            conn.close()
+
+    return render_template('player_stats.html', players=players, all_players=all_players, selected_player=selected_player, player_stats=player_stats)
+
+
+def calculate_player_stats(player):
+    matches = player["matches"]
+    wins = 0
+    losses = 0
+    draws = 0
+    win_by_finish = Counter()
+    total_points = 0
+    opponents = Counter()
+
+    for match in matches:
+        opponent = match["opponent"]
+        opponents[opponent] += 1
+
+        if match["winner"] == player["name"]:
+            result = "win"
+        elif match["winner"] == "Draw":
+            result = "draw"
+        else:
+            result = "loss"
+
+        if result == "win":
+            if match["finish_type"] == "Survivor":
+                points = 1
+            elif match["finish_type"] in ("Burst", "KO"):
+                points = 2
+            elif match["finish_type"] == "Extreme":
+                points = 3
+            else:
+                points = 0
+            wins += 1
+            total_points += points
+            win_by_finish[match["finish_type"]] += 1
+        elif result == "draw":
+            draws += 1
+        elif result == "loss":
+            losses += 1
+
+    win_rate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0
+    most_frequent_opponent = opponents.most_common(1)[0] if opponents else None
+
+    return {
+        "wins": wins,
+        "losses": losses,
+        "draws": draws,
+        "win_rate": win_rate,
+        "win_by_finish": win_by_finish,
+        "total_points": total_points,
+        "most_frequent_opponent": most_frequent_opponent,
+        "name": player.get("name") #ensure the name is passed back
+    }
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
