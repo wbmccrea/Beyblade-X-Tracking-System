@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Player Statistics</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Player Statistics</h1>
+
+    <form method="GET" action="/players/stats">
+        <label for="player">Filter by Player:</label>
+        <select name="player" id="player" onchange="this.form.submit()">
+            <option value="">All Players</option>
+            {% for p in all_players %}
+                <option value="{{ p.id }}" {% if p.id | string == selected_player %}selected{% endif %}>{{ p.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    {% if players %}
+        {% for player in players %}
+            <h2>{{ player.name }}</h2>
+
+            {% if player_stats %}
+                <div class="summary">
+                    <h3>Player Summary:</h3>
+                    <p>Total Points: {{ player_stats.total_points }}</p>
+                    <p>Wins: {{ player_stats.wins }}</p>
+                    <p>Losses: {{ player_stats.losses }}</p>
+                    <p>Draws: {{ player_stats.draws }}</p>
+                    <p>Win Rate: {{ player_stats.win_rate|round(2) }}%</p>
+                    {% if player_stats.win_by_finish %}
+                        <p>Wins by Finish Type:</p>
+                        <ul>
+                            {% for finish, count in player_stats.win_by_finish.items() %}
+                                <li>{{ finish }}: {{ count }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No wins recorded.</p>
+                    {% endif %}
+                    {% if player_stats.most_frequent_opponent %}
+                        <p>Most Frequent Opponent: {{ player_stats.most_frequent_opponent[0] }} ({{ player_stats.most_frequent_opponent[1] }} matches)</p>
+                    {% else %}
+                        <p>No opponents recorded.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if player.details.matches %}
+                <h3>Matches:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Match ID</th>
+                            <th>Opponent</th>
+                            <th>Finish Type</th>
+                            <th>Winner</th>
+                            <th>Match Time</th>
+                            <th>Tournament</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in player.details.matches %}
+                            <tr>
+                                <td>{{ match.match_id }}</td>
+                                <td>{{ match.opponent }}</td>
+                                <td>{{ match.finish_type }}</td>
+                                <td>{{ match.winner }}</td>
+                                <td>{{ match.match_time }}</td>
+                                <td>{{match.tournament_name}}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No matches recorded for this player.</p>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p>No players recorded.</p>
+    {% endif %}
+
+</body>
+</html>
