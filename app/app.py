@@ -569,25 +569,30 @@ def calculate_tournament_stats(tournament):
     wins_by_finish = Counter()
     num_draws = 0
     num_wins = 0
+    player_points = Counter() #added player points
 
     for match in matches:
         players.add(match["player1"])
         players.add(match["player2"])
         combinations.add(match["player1_combination"])
         combinations.add(match["player2_combination"])
-        launchers_used[(match["player1"], match["player1_launcher"])] +=1
-        launchers_used[(match["player2"], match["player2_launcher"])] +=1
+        launchers_used[(match["player1"], match["player1_launcher"])] += 1
+        launchers_used[(match["player2"], match["player2_launcher"])] += 1
         finish_types[match["finish_type"]] += 1
         if match["winner"] == "Draw":
             num_draws += 1
         else:
-            wins_by_finish[match["finish_type"]] +=1
+            wins_by_finish[match["finish_type"]] += 1
             num_wins += 1
             player_wins[match["winner"]] += 1
             if match["winner"] == match["player1"]:
                 combination_wins[match["player1_combination"]] += 1
+                player_points[match["player1"]] += 3 #add points for player 1
+                player_points[match["player2"]] += 0 #add points for player 2
             else:
                 combination_wins[match["player2_combination"]] += 1
+                player_points[match["player2"]] += 3 #add points for player 2
+                player_points[match["player1"]] += 0 #add points for player 1
     
     winning_player_by_wins = player_wins.most_common(1)[0] if player_wins else None
     winning_combination_by_wins = combination_wins.most_common(1)[0] if combination_wins else None
@@ -612,4 +617,6 @@ def calculate_tournament_stats(tournament):
         "most_common_finish_type": most_common_finish_type,
         "num_draws": num_draws,
         "win_rate_by_finish": win_rate_by_finish,
+        "total_matches": len(matches), #added total matches
+        "player_points": player_points, #added player points
     }

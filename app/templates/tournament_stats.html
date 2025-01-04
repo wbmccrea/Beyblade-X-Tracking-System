@@ -23,7 +23,7 @@
 <body>
     <h1>Tournament Statistics</h1>
 
-    <form method="GET" action="/tournaments/stats"> {# Added action attribute #}
+    <form method="GET" action="/tournaments/stats">
         <label for="tournament">Filter by Tournament:</label>
         <select name="tournament" id="tournament" onchange="this.form.submit()">
             <option value="">All Tournaments</option>
@@ -42,6 +42,9 @@
             {% if tournament_stats %}
                 <div class="summary">
                     <h3>Tournament Summary:</h3>
+                    <p>Total Matches: {{ tournament_stats.total_matches }}</p>
+                    <p>Number of Players: {{ tournament_stats.num_players }}</p>
+                    <p>Number of Combinations: {{ tournament_stats.num_combinations }}</p>
                     <h3>Match Statistics:</h3>
                     {% if tournament_stats.most_common_finish_type %}
                         <p>Most Common Finish Type: {{ tournament_stats.most_common_finish_type[0] }} ({{ tournament_stats.most_common_finish_type[1] }} times)</p>
@@ -59,12 +62,6 @@
                     {% else %}
                         <p>No wins recorded to calculate win rates.</p>
                     {% endif %}
-                    {% if tournament_stats.num_players %}
-                        <p>Number of Players: {{ tournament_stats.num_players }}</p>
-                    {% endif %}
-                     {% if tournament_stats.num_combinations %}
-                        <p>Number of Combinations: {{ tournament_stats.num_combinations }}</p>
-                    {% endif %}
                     {% if tournament_stats.winning_player_by_wins %}
                         <p>Winning Player (by Wins): {{ tournament_stats.winning_player_by_wins[0] }} ({{ tournament_stats.winning_player_by_wins[1] }} wins)</p>
                     {% endif %}
@@ -77,13 +74,23 @@
                     {% if tournament_stats.most_common_launcher %}
                         <p>Most Common Launcher used by {{tournament_stats.most_common_launcher[0][0]}}: {{tournament_stats.most_common_launcher[0][1]}} ({{tournament_stats.most_common_launcher[1]}} uses)</p>
                     {% endif %}
+                    <h3>Player Points:</h3>
+                    {% if tournament_stats.player_points %}
+                        <ul>
+                            {% for player, points in tournament_stats.player_points.items() %}
+                                <li>{{ player }}: {{ points }} points</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No player points to display.</p>
+                    {% endif %}
                 </div>
             {% endif %}
 
-            {% if tournament.details.matches %} {# Corrected condition #}
+            {% if tournament.details.matches %}
                 <h3>Matches:</h3>
                 <table>
-                    <thead>
+                    <thead> {# Added table header #}
                         <tr>
                             <th>Match ID</th>
                             <th>Player 1</th>
@@ -97,7 +104,7 @@
                             <th>Match Time</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody> {# Added table body and rows #}
                         {% for match in tournament.details.matches %}
                             <tr>
                                 <td>{{ match.match_id }}</td>
@@ -124,13 +131,13 @@
 
     <h2>Overall Standings</h2>
     <table>
-        <thead>
+        <thead> {# Added table header #}
             <tr>
                 <th>Player</th>
                 <th>Total Wins</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody> {# Added table body and rows #}
             {% for standing in overall_standings %}
             <tr>
                 <td>{{standing.player}}</td>
