@@ -1026,7 +1026,7 @@ def leaderboard():
         for player_id, player_name, wins, losses, draws, points in player_results:
             most_used_combination = "N/A"
             most_common_win_type = "N/A"
-            most_common_draw_type = "N/A"
+            most_common_loss_type = "N/A"
 
             cursor.execute("""
                 SELECT bc.combination_name
@@ -1058,14 +1058,14 @@ def leaderboard():
             cursor.execute("""
                 SELECT m.finish_type
                 FROM Matches m
-                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id = (select player_id from Players where player_name = 'Draw')
+                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id != %s
                 GROUP BY m.finish_type
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
-            """, (player_id, player_id))
-            draw_type_result = cursor.fetchone()
-            if draw_type_result:
-                most_common_draw_type = draw_type_result[0]
+            """, (player_id, player_id, player_id))
+            loss_type_result = cursor.fetchone()
+            if loss_type_result:
+                most_common_loss_type = loss_type_result[0]
 
             leaderboard_data.append({
                 "rank": rank,
@@ -1076,7 +1076,7 @@ def leaderboard():
                 "draws": draws,
                 "most_used_combination": most_used_combination,
                 "most_common_win_type": most_common_win_type,
-                "most_common_loss_type": most_common_draw_type,
+                "most_common_loss_type": most_common_loss_type,
             })
             rank += 1
 
@@ -1089,4 +1089,5 @@ def leaderboard():
 
     columns_to_show = request.args.getlist('columns')
     return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show)
+
 
