@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Combination Leaderboard</title>
-        <style>
+    <style>
         /* Basic CSS for styling the table */
         body {
             font-family: sans-serif;
@@ -60,6 +60,10 @@
                 <label>Columns to Show:</label><br>
                 <input type="checkbox" name="columns" value="rank" {% if 'rank' in columns_to_show %}checked{% endif %}> Rank<br>
                 <input type="checkbox" name="columns" value="usage_count" {% if 'usage_count' in columns_to_show %}checked{% endif %}> Usage Count<br>
+                <input type="checkbox" name="columns" value="wins" {% if 'wins' in columns_to_show %}checked{% endif %}> Wins<br>
+                <input type="checkbox" name="columns" value="losses" {% if 'losses' in columns_to_show %}checked{% endif %}> Losses<br>
+                <input type="checkbox" name="columns" value="draws" {% if 'draws' in columns_to_show %}checked{% endif %}> Draws<br>
+                <input type="checkbox" name="columns" value="win_rate" {% if 'win_rate' in columns_to_show %}checked{% endif %}> Win Rate<br>
                 <input type="checkbox" name="columns" value="most_used_by" {% if 'most_used_by' in columns_to_show %}checked{% endif %}> Most Used By<br>
                 <button type="submit">Update Leaderboard</button>
             </form>
@@ -71,6 +75,10 @@
                         {% if 'rank' in columns_to_show %}<th>Rank</th>{% endif %}
                         <th>Combination</th>
                         {% if 'usage_count' in columns_to_show %}<th>Usage Count</th>{% endif %}
+                        {% if 'wins' in columns_to_show %}<th>Wins</th>{% endif %}
+                        {% if 'losses' in columns_to_show %}<th>Losses</th>{% endif %}
+                        {% if 'draws' in columns_to_show %}<th>Draws</th>{% endif %}
+                        {% if 'win_rate' in columns_to_show %}<th>Win Rate</th>{% endif %}
                         {% if 'most_used_by' in columns_to_show %}<th>Most Used By</th>{% endif %}
                     </tr>
                 </thead>
@@ -80,6 +88,10 @@
                             {% if 'rank' in columns_to_show %}<td>{{ combination.rank }}</td>{% endif %}
                             <td>{{ combination.name }}</td>
                             {% if 'usage_count' in columns_to_show %}<td>{{ combination.usage_count }}</td>{% endif %}
+                            {% if 'wins' in columns_to_show %}<td>{{ combination.wins }}</td>{% endif %}
+                            {% if 'losses' in columns_to_show %}<td>{{ combination.losses }}</td>{% endif %}
+                            {% if 'draws' in columns_to_show %}<td>{{ combination.draws }}</td>{% endif %}
+                            {% if 'win_rate' in columns_to_show %}<td>{{ combination.win_rate|round(2) }}%</td>{% endif %}
                             {% if 'most_used_by' in columns_to_show %}<td>{{ combination.most_used_by }}</td>{% endif %}
                         </tr>
                     {% endfor %}

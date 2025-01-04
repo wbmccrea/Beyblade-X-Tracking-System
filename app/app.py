@@ -1143,33 +1143,51 @@ def combination_leaderboard():
         columns_to_show = request.args.getlist('columns')
 
         where_clause = ""
-        query_params = [num_combinations]
+        query_params = []
 
         if tournament_id:
-            where_clause = "WHERE m.tournament_id = %s"
-            query_params.insert(0, tournament_id)
+            where_clause = "AND m.tournament_id = %s"
+            query_params.append(tournament_id)
 
         cursor.execute(f"""
-            SELECT bc.combination_id, bc.combination_name, COUNT(*) AS usage_count,
-            (SELECT p.player_name FROM Players p JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id) WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id) {where_clause} GROUP BY p.player_id ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_by
+            SELECT bc.combination_id, bc.combination_name,
+                   COUNT(*) AS usage_count,
+                   SUM(CASE WHEN m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id THEN 1
+                            WHEN m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id THEN 1
+                            ELSE 0 END) AS wins,
+                   SUM(CASE WHEN m.winner_id != m.player1_id AND m.player1_combination_id = bc.combination_id AND m.draw = FALSE AND m.winner_id IS NOT NULL THEN 1
+                            WHEN m.winner_id != m.player2_id AND m.player2_combination_id = bc.combination_id AND m.draw = FALSE AND m.winner_id IS NOT NULL THEN 1
+                            ELSE 0 END) AS losses,
+                   SUM(CASE WHEN (m.player1_combination_id = bc.combination_id OR m.player2_combination_id = bc.combination_id) AND m.draw = TRUE THEN 1 ELSE 0 END) as draws,
+                   (SELECT p.player_name 
+                    FROM Players p 
+                    JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id) 
+                    WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id) {where_clause}
+                    GROUP BY p.player_id 
+                    ORDER BY COUNT(*) DESC 
+                    LIMIT 1) AS most_used_by
             FROM BeybladeCombinations bc
             JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
             {where_clause}
             GROUP BY bc.combination_id, bc.combination_name
             ORDER BY usage_count DESC
             LIMIT %s
-        """, tuple(query_params))
+        """, tuple(query_params + [num_combinations]))
 
         combination_results = cursor.fetchall()
         leaderboard_data = []
         rank = 1
 
-        for combination_id, combination_name, usage_count, most_used_by in combination_results:
+        for combination_id, combination_name, usage_count, wins, losses, draws, most_used_by in combination_results:
             leaderboard_data.append({
                 "rank": rank,
                 "name": combination_name,
                 "usage_count": usage_count,
-                "most_used_by": most_used_by or "N/A", # Handle cases where there is no 'most used by'
+                "wins": wins,
+                "losses": losses,
+                "draws": draws,
+                "most_used_by": most_used_by or "N/A",
+                "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
             })
             rank += 1
         try:
@@ -1186,5 +1204,4 @@ def combination_leaderboard():
         return f"Database error: {e}", 500
     finally:
         if conn:
-            conn.close()
-            
+            conn.close()            
