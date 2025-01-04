@@ -3,14 +3,35 @@
 <head>
     <title>Tournament Stats</title>
     <style>
-        /* ... (Existing styles) */
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <h1>Tournament Statistics</h1>
 
-    <form method="GET">
-        </form>
+    <form method="GET" action="/tournaments/stats"> {# Added action attribute #}
+        <label for="tournament">Filter by Tournament:</label>
+        <select name="tournament" id="tournament" onchange="this.form.submit()">
+            <option value="">All Tournaments</option>
+            {% for t in all_tournaments %}
+                <option value="{{ t.id }}" {% if t.id | string == selected_tournament %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
 
     {% if tournaments %}
         {% for tournament in tournaments %}
@@ -38,13 +59,61 @@
                     {% else %}
                         <p>No wins recorded to calculate win rates.</p>
                     {% endif %}
+                    {% if tournament_stats.num_players %}
+                        <p>Number of Players: {{ tournament_stats.num_players }}</p>
+                    {% endif %}
+                     {% if tournament_stats.num_combinations %}
+                        <p>Number of Combinations: {{ tournament_stats.num_combinations }}</p>
+                    {% endif %}
+                    {% if tournament_stats.winning_player_by_wins %}
+                        <p>Winning Player (by Wins): {{ tournament_stats.winning_player_by_wins[0] }} ({{ tournament_stats.winning_player_by_wins[1] }} wins)</p>
+                    {% endif %}
+                    {% if tournament_stats.winning_combination_by_wins %}
+                        <p>Winning Combination (by Wins): {{ tournament_stats.winning_combination_by_wins[0] }} ({{ tournament_stats.winning_combination_by_wins[1] }} wins)</p>
+                    {% endif %}
+                    {% if tournament_stats.most_common_combination %}
+                        <p>Most Common Combination: {{ tournament_stats.most_common_combination[0] }} ({{ tournament_stats.most_common_combination[1] }} uses)</p>
+                    {% endif %}
+                    {% if tournament_stats.most_common_launcher %}
+                        <p>Most Common Launcher used by {{tournament_stats.most_common_launcher[0][0]}}: {{tournament_stats.most_common_launcher[0][1]}} ({{tournament_stats.most_common_launcher[1]}} uses)</p>
+                    {% endif %}
                 </div>
             {% endif %}
 
-            {% if tournament.details.matches %}
+            {% if tournament.details.matches %} {# Corrected condition #}
                 <h3>Matches:</h3>
                 <table>
-                    </table>
+                    <thead>
+                        <tr>
+                            <th>Match ID</th>
+                            <th>Player 1</th>
+                            <th>Player 1 Combination</th>
+                            <th>Player 1 Launcher</th>
+                            <th>Player 2</th>
+                            <th>Player 2 Combination</th>
+                            <th>Player 2 Launcher</th>
+                            <th>Finish Type</th>
+                            <th>Winner</th>
+                            <th>Match Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in tournament.details.matches %}
+                            <tr>
+                                <td>{{ match.match_id }}</td>
+                                <td>{{ match.player1 }}</td>
+                                <td>{{ match.player1_combination }}</td>
+                                <td>{{ match.player1_launcher }}</td>
+                                <td>{{ match.player2 }}</td>
+                                <td>{{ match.player2_combination }}</td>
+                                <td>{{ match.player2_launcher }}</td>
+                                <td>{{ match.finish_type }}</td>
+                                <td>{{ match.winner }}</td>
+                                <td>{{ match.match_time }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% else %}
                 <p>No matches recorded for this tournament.</p>
             {% endif %}
@@ -55,7 +124,21 @@
 
     <h2>Overall Standings</h2>
     <table>
-        </table>
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Total Wins</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for standing in overall_standings %}
+            <tr>
+                <td>{{standing.player}}</td>
+                <td>{{standing.wins}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
 </body>
 </html>
