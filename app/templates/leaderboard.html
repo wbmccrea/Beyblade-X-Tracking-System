@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard</title>
+    <style>
+        /* ... (Your existing CSS styles) */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beyblade X Leaderboard</h1>
+        <div class="module">
+        <a href="/">Home</a>
+        </div>
+        <div class = "module">
+            <form method="GET" action="/leaderboard">
+                <label for="num_players">Number of Players:</label>
+                <input type="number" name="num_players" id="num_players" value="{{ num_players }}" min="1">
+                <br>
+                <label>Columns to Show:</label><br>
+                <input type="checkbox" name="columns" value="wins" {% if 'wins' in columns_to_show %}checked{% endif %}> Wins<br>
+                <input type="checkbox" name="columns" value="losses" {% if 'losses' in columns_to_show %}checked{% endif %}> Losses<br>
+                <input type="checkbox" name="columns" value="draws" {% if 'draws' in columns_to_show %}checked{% endif %}> Draws<br>
+                <input type="checkbox" name="columns" value="points" {% if 'points' in columns_to_show %}checked{% endif %}> Points<br>
+                <input type="checkbox" name="columns" value="combination" {% if 'combination' in columns_to_show %}checked{% endif %}> Most Used Combination<br>
+                <input type="checkbox" name="columns" value="win_type" {% if 'win_type' in columns_to_show %}checked{% endif %}> Most Common Win Type<br>
+                <input type="checkbox" name="columns" value="loss_type" {% if 'loss_type' in columns_to_show %}checked{% endif %}> Most Common Loss Type<br>
+                <button type="submit">Update Leaderboard</button>
+            </form>
+        </div>
+
+        <div class="module">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        {% if 'wins' in columns_to_show %}<th>Wins</th>{% endif %}
+                        {% if 'losses' in columns_to_show %}<th>Losses</th>{% endif %}
+                        {% if 'draws' in columns_to_show %}<th>Draws</th>{% endif %}
+                        {% if 'points' in columns_to_show %}<th>Points</th>{% endif %}
+                        {% if 'combination' in columns_to_show %}<th>Most Used Combination</th>{% endif %}
+                        {% if 'win_type' in columns_to_show %}<th>Most Common Win Type</th>{% endif %}
+                        {% if 'loss_type' in columns_to_show %}<th>Most Common Loss Type</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in leaderboard_data %}
+                        <tr>
+                            <td>{{ player.name }}</td>
+                            {% if 'wins' in columns_to_show %}<td>{{ player.wins }}</td>{% endif %}
+                            {% if 'losses' in columns_to_show %}<td>{{ player.losses }}</td>{% endif %}
+                            {% if 'draws' in columns_to_show %}<td>{{ player.draws }}</td>{% endif %}
+                            {% if 'points' in columns_to_show %}<td>{{ player.points }}</td>{% endif %}
+                            {% if 'combination' in columns_to_show %}<td>{{ player.most_used_combination }}</td>{% endif %}
+                            {% if 'win_type' in columns_to_show %}<td>{{ player.most_common_win_type }}</td>{% endif %}
+                            {% if 'loss_type' in columns_to_show %}<td>{{ player.most_common_loss_type }}</td>{% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

@@ -988,3 +988,87 @@ def calculate_combination_stats(combination):
         "most_frequent_loss": most_frequent_loss,
         "win_loss_streak": win_loss_streak
     }
+
+@app.route('/leaderboard', methods=['GET'])
+def leaderboard():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
+
+    try:
+        num_players = int(request.args.get('num_players', 5))  # Default to 5
+        if num_players < 1:
+            num_players = 5
+
+        cursor.execute("""
+            SELECT p.player_id, p.player_name,
+                   COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
+                   COUNT(CASE WHEN m.winner_id != p.player_id AND m.winner_id != (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS losses,
+                   COUNT(CASE WHEN m.winner_id = (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS draws,
+                   SUM(CASE WHEN m.winner_id = p.player_id THEN 3 WHEN m.winner_id = (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 ELSE 0 END) AS points
+            FROM Players p
+            LEFT JOIN Matches m ON p.player_id IN (m.player1_id, m.player2_id)
+            GROUP BY p.player_id, p.player_name
+            ORDER BY points DESC
+            LIMIT %s
+        """, (num_players,))
+        player_results = cursor.fetchall()
+
+        leaderboard_data = []
+        for player_id, player_name, wins, losses, draws, points in player_results:
+            cursor.execute("""
+                SELECT bc.combination_name, COUNT(*) AS count
+                FROM Matches m
+                JOIN BeybladeCombinations bc ON (
+                    (m.player1_id = %s AND m.player1_combination_id = bc.combination_id) OR
+                    (m.player2_id = %s AND m.player2_combination_id = bc.combination_id)
+                )
+                GROUP BY bc.combination_name
+                ORDER BY count DESC
+                LIMIT 1
+            """, (player_id, player_id))
+            most_used_combination = cursor.fetchone()
+
+            cursor.execute("""
+                SELECT m.finish_type, COUNT(*) AS count
+                FROM Matches m
+                WHERE (m.winner_id = %s)
+                GROUP BY m.finish_type
+                ORDER BY count DESC
+                LIMIT 1
+            """, (player_id,))
+            most_common_win_type = cursor.fetchone()
+
+            cursor.execute("""
+                SELECT m.finish_type, COUNT(*) AS count
+                FROM Matches m
+                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id != %s and m.winner_id != (select player_id from Players where player_name = 'Draw')
+                GROUP BY m.finish_type
+                ORDER BY count DESC
+                LIMIT 1
+            """, (player_id, player_id, player_id))
+            most_common_loss_type = cursor.fetchone()
+
+            leaderboard_data.append({
+                "name": player_name,
+                "wins": wins,
+                "losses": losses,
+                "draws": draws,
+                "points": points,
+                "most_used_combination": most_used_combination[0] if most_used_combination else "N/A",
+                "most_common_win_type": most_common_win_type[0] if most_common_win_type else "N/A",
+                "most_common_loss_type": most_common_loss_type[0] if most_common_loss_type else "N/A",
+            })
+
+    except mysql.connector.Error as e:
+        logger.error(f"Database error: {e}")
+        return f"Database error: {e}", 500
+    finally:
+        if conn:
+            conn.close()
+
+    columns_to_show = request.args.getlist('columns') #Get list of columns to show
+
+    return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show)
+
