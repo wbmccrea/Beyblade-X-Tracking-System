@@ -464,9 +464,12 @@ def tournament_stats():
     selected_tournament = request.args.get('tournament', None)
 
     try:
-        # Get all tournaments for the dropdown (always needed)
-        cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
-        all_tournaments = [{"name": t[0], "id": t[1]} for t in cursor.fetchall()]
+        # Get all tournaments for the dropdown
+        try:
+            cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
+            all_tournaments = [{"name": t[0], "id": t[1]} for t in cursor.fetchall()]
+        except mysql.connector.Error as e:
+            logger.error(f"Error retrieving tournaments for dropdown: {e}")
 
         # Construct WHERE clause for filtering
         where_clause = ""
@@ -474,25 +477,29 @@ def tournament_stats():
             where_clause = f"WHERE t.tournament_id = {selected_tournament}"
 
         # Get Tournament and Match Data
-        cursor.execute(f"""
-            SELECT t.tournament_name, t.start_date, t.end_date, m.match_id,
-                   p1.player_name AS player1_name, p2.player_name AS player2_name,
-                   bc1.combination_name AS player1_combination, bc2.combination_name AS player2_combination,
-                    lt1.launcher_name as player1_launcher, lt2.launcher_name as player2_launcher,
-                   m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time
-            FROM Tournaments t
-            LEFT JOIN Matches m ON t.tournament_id = m.tournament_id
-            LEFT JOIN Players p1 ON m.player1_id = p1.player_id
-            LEFT JOIN Players p2 ON m.player2_id = p2.player_id
-            LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
-            LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
-            LEFT JOIN LauncherTypes lt1 on m.player1_launcher_id = lt1.launcher_id
-            LEFT JOIN LauncherTypes lt2 on m.player2_launcher_id = lt2.launcher_id
-            LEFT JOIN Players w ON m.winner_id = w.player_id
-            {where_clause}
-            ORDER BY t.start_date DESC
-        """)
-        results = cursor.fetchall()
+        try:
+            cursor.execute(f"""
+                SELECT t.tournament_name, t.start_date, t.end_date, m.match_id,
+                       p1.player_name AS player1_name, p2.player_name AS player2_name,
+                       bc1.combination_name AS player1_combination, bc2.combination_name AS player2_combination,
+                        lt1.launcher_name as player1_launcher, lt2.launcher_name as player2_launcher,
+                       m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time
+                FROM Tournaments t
+                LEFT JOIN Matches m ON t.tournament_id = m.tournament_id
+                LEFT JOIN Players p1 ON m.player1_id = p1.player_id
+                LEFT JOIN Players p2 ON m.player2_id = p2.player_id
+                LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
+                LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
+                LEFT JOIN LauncherTypes lt1 on m.player1_launcher_id = lt1.launcher_id
+                LEFT JOIN LauncherTypes lt2 on m.player2_launcher_id = lt2.launcher_id
+                LEFT JOIN Players w ON m.winner_id = w.player_id
+                {where_clause}
+                ORDER BY t.start_date DESC
+            """)
+            results = cursor.fetchall()
+        except mysql.connector.Error as e:
+            logger.error(f"Error retrieving tournament/match data: {e}")
+            results = [] #set to empty list to avoid errors
 
         # Process Tournament and Match Data
         tournaments_data = {}
@@ -525,17 +532,20 @@ def tournament_stats():
             tournament_stats = calculate_tournament_stats(tournament_details)
         
         #Overall Standings
-        cursor.execute("""
-            SELECT p.player_name, COUNT(m.winner_id) AS wins
-            FROM Players p
-            LEFT JOIN Matches m ON p.player_id = m.winner_id
-            GROUP BY p.player_name
-            ORDER BY wins DESC
-        """)
-        overall_standings = [{"player": row[0], "wins": row[1]} for row in cursor.fetchall()]
+        try:
+            cursor.execute("""
+                SELECT p.player_name, COUNT(m.winner_id) AS wins
+                FROM Players p
+                LEFT JOIN Matches m ON p.player_id = m.winner_id
+                GROUP BY p.player_name
+                ORDER BY wins DESC
+            """)
+            overall_standings = [{"player": row[0], "wins": row[1]} for row in cursor.fetchall()]
+        except mysql.connector.Error as e:
+            logger.error(f"Error retrieving overall standings: {e}")
 
     except mysql.connector.Error as e:
-        logger.error(f"Database error: {e}")
+        logger.error(f"Outer database error: {e}") #catch any other errors
         return f"Database error: {e}", 500
     finally:
         if conn:
@@ -550,6 +560,10 @@ def calculate_tournament_stats(tournament):
     launchers_used = Counter()
     players = set()
     combinations = set()
+    finish_types = Counter()
+    wins_by_finish = Counter()
+    num_draws = 0
+    num_wins = 0
 
     for match in matches:
         players.add(match["player1"])
@@ -558,7 +572,12 @@ def calculate_tournament_stats(tournament):
         combinations.add(match["player2_combination"])
         launchers_used[(match["player1"], match["player1_launcher"])] +=1
         launchers_used[(match["player2"], match["player2_launcher"])] +=1
-        if match["winner"] != "Draw":
+        finish_types[match["finish_type"]] += 1
+        if match["winner"] == "Draw":
+            num_draws += 1
+        else:
+            wins_by_finish[match["finish_type"]] +=1
+            num_wins += 1
             player_wins[match["winner"]] += 1
             if match["winner"] == match["player1"]:
                 combination_wins[match["player1_combination"]] += 1
@@ -569,7 +588,12 @@ def calculate_tournament_stats(tournament):
     winning_combination_by_wins = combination_wins.most_common(1)[0] if combination_wins else None
     most_common_combination = combination_wins.most_common(1)[0] if combination_wins else None
     most_common_launcher = launchers_used.most_common(1)[0] if launchers_used else None
+    most_common_finish_type = finish_types.most_common(1)[0] if finish_types else None
 
+    win_rate_by_finish = {}
+    if num_wins > 0:
+        for finish, count in wins_by_finish.items():
+            win_rate_by_finish[finish] = (count / num_wins) * 100
 
     return {
         "num_players": len(players),
@@ -579,5 +603,8 @@ def calculate_tournament_stats(tournament):
         "winning_player_by_wins": winning_player_by_wins,
         "winning_combination_by_wins": winning_combination_by_wins,
         "most_common_combination": most_common_combination,
-        "most_common_launcher": most_common_launcher
+        "most_common_launcher": most_common_launcher,
+        "most_common_finish_type": most_common_finish_type,
+        "num_draws": num_draws,
+        "win_rate_by_finish": win_rate_by_finish,
     }
