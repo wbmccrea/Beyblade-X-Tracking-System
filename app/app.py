@@ -1126,3 +1126,65 @@ def leaderboard():
         if conn:
             conn.close()
 
+
+@app.route('/combination_leaderboard', methods=['GET'])
+def combination_leaderboard():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
+
+    try:
+        num_combinations = int(request.args.get('num_combinations', 5))
+        if num_combinations < 1:
+            num_combinations = 5
+
+        tournament_id = request.args.get('tournament_id')
+        columns_to_show = request.args.getlist('columns')
+
+        where_clause = ""
+        query_params = [num_combinations]
+
+        if tournament_id:
+            where_clause = "WHERE m.tournament_id = %s"
+            query_params.insert(0, tournament_id)
+
+        cursor.execute(f"""
+            SELECT bc.combination_id, bc.combination_name, COUNT(*) AS usage_count,
+            (SELECT p.player_name FROM Players p JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id) WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id) {where_clause} GROUP BY p.player_id ORDER BY COUNT(*) DESC LIMIT 1) AS most_used_by
+            FROM BeybladeCombinations bc
+            JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
+            {where_clause}
+            GROUP BY bc.combination_id, bc.combination_name
+            ORDER BY usage_count DESC
+            LIMIT %s
+        """, tuple(query_params))
+
+        combination_results = cursor.fetchall()
+        leaderboard_data = []
+        rank = 1
+
+        for combination_id, combination_name, usage_count, most_used_by in combination_results:
+            leaderboard_data.append({
+                "rank": rank,
+                "name": combination_name,
+                "usage_count": usage_count,
+                "most_used_by": most_used_by or "N/A", # Handle cases where there is no 'most used by'
+            })
+            rank += 1
+        try:
+            cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
+            tournaments = cursor.fetchall()
+            tournaments = [dict(zip([column[0] for column in cursor.description], row)) for row in tournaments]
+        except mysql.connector.Error as e:
+            logger.error(f"Error fetching tournaments: {e}")
+            tournaments = []
+        return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, columns_to_show=columns_to_show, tournament_id=tournament_id, tournaments=tournaments)
+
+    except mysql.connector.Error as e:
+        logger.error(f"Database error: {e}")
+        return f"Database error: {e}", 500
+    finally:
+        if conn:
+            conn.close()
+            
