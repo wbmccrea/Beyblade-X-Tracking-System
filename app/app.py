@@ -1004,7 +1004,7 @@ def leaderboard():
         cursor.execute("""
             SELECT p.player_id, p.player_name,
                    COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
-                   COUNT(CASE WHEN m.winner_id != p.player_id AND m.winner_id != (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS losses,
+                   COUNT(CASE WHEN m.winner_id != p.player_id and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS losses,
                    COUNT(CASE WHEN m.winner_id = (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS draws,
                    SUM(CASE WHEN m.winner_id = p.player_id THEN 3 WHEN m.winner_id = (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 ELSE 0 END) AS points
             FROM Players p
@@ -1018,9 +1018,9 @@ def leaderboard():
         leaderboard_data = []
         rank = 1
         for player_id, player_name, wins, losses, draws, points in player_results:
-            most_used_combination = "N/A" #Set default value
-            most_common_win_type = "N/A" #Set default value
-            most_common_loss_type = "N/A" #Set default value
+            most_used_combination = "N/A"
+            most_common_win_type = "N/A"
+            most_common_loss_type = "N/A"
 
             cursor.execute("""
                 SELECT bc.combination_name
