@@ -1004,19 +1004,20 @@ def leaderboard():
         cursor.execute("""
             SELECT p.player_id, p.player_name,
                    COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
-                   COUNT(CASE WHEN m.winner_id != p.player_id and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS losses,
-                   COUNT(CASE WHEN m.winner_id = (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 END) AS draws,
-                   SUM(CASE WHEN m.winner_id = p.player_id THEN 3 WHEN m.winner_id = (SELECT player_id from Players where player_name = 'Draw') and (m.player1_id = p.player_id or m.player2_id = p.player_id) THEN 1 ELSE 0 END) AS points
+                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.winner_id != p.player_id AND m.winner_id != (SELECT player_id FROM Players WHERE player_name = 'Draw') THEN 1 END) AS losses,
+                   COUNT(CASE WHEN m.winner_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') AND (m.player1_id = p.player_id OR m.player2_id = p.player_id) THEN 1 END) AS draws,
+                   SUM(CASE WHEN m.winner_id = p.player_id THEN 3 WHEN m.winner_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') AND (m.player1_id = p.player_id OR m.player2_id = p.player_id) THEN 1 ELSE 0 END) AS points
             FROM Players p
             LEFT JOIN Matches m ON p.player_id IN (m.player1_id, m.player2_id)
             GROUP BY p.player_id, p.player_name
             ORDER BY points DESC
             LIMIT %s
         """, (num_players,))
-        player_results = cursor.fetchall()
 
+        player_results = cursor.fetchall()
         leaderboard_data = []
         rank = 1
+
         for player_id, player_name, wins, losses, draws, points in player_results:
             most_used_combination = "N/A"
             most_common_win_type = "N/A"
@@ -1052,14 +1053,14 @@ def leaderboard():
             cursor.execute("""
                 SELECT m.finish_type
                 FROM Matches m
-                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id != %s and m.winner_id != (select player_id from Players where player_name = 'Draw')
+                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id != %s and m.winner_id = (select player_id from Players where player_name = 'Draw')
                 GROUP BY m.finish_type
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
             """, (player_id, player_id, player_id))
-            loss_type_result = cursor.fetchone()
-            if loss_type_result:
-                most_common_loss_type = loss_type_result[0]
+            draw_type_result = cursor.fetchone()
+            if draw_type_result:
+                most_common_loss_type = draw_type_result[0]
 
             leaderboard_data.append({
                 "rank": rank,
