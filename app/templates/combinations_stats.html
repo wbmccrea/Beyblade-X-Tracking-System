@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Combination Statistics</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        .module {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #eee;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beyblade Statistics</h1>
+
+        <div class="module">
+            <a href="/">Home</a>
+        </div>
+
+        <div class="module">
+            <h2>Combination Statistics</h2>
+
+            <form method="GET" action="/combinations/stats">
+                <label for="combination">Filter by Combination:</label>
+                <select name="combination" id="combination" onchange="this.form.submit()">
+                    <option value="">All Combinations</option>
+                    {% for c in all_combinations %}
+                        <option value="{{ c.id }}" {% if c.id | string == selected_combination %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            {% if combination_stats %}
+                <h3>{{ combination_stats.name }} Statistics</h3>
+                <p>Total Matches Played: {{ combination_stats.total_matches_played }}</p>
+                <p>Wins: {{ combination_stats.wins }}</p>
+                <p>Losses: {{ combination_stats.losses }}</p>
+                <p>Draws: {{ combination_stats.draws }}</p>
+                <p>Win Rate: {{ combination_stats.win_rate|round(2) }}%</p>
+
+                {% if combination_stats.most_frequent_opponent %}
+                    <p>Most Frequent Opponent: {{ combination_stats.most_frequent_opponent[0] }} ({{ combination_stats.most_frequent_opponent[1] }} matches)</p>
+                {% else %}
+                    <p>No opponents recorded.</p>
+                {% endif %}
+
+                {% if combination_stats.most_frequent_loss %}
+                    <p>Most Frequent Loss Type: {{ combination_stats.most_frequent_loss[0] }} ({{ combination_stats.most_frequent_loss[1] }} times)</p>
+                {% else %}
+                    <p>No losses recorded.</p>
+                {% endif %}
+
+                <p>Win Rate Against Each Opponent</p>
+                <ul>
+                    {% for opponent, winrate in combination_stats.win_rate_against_each_opponent.items() %}
+                        <li>{{ opponent }}: {{ winrate|round(2) }}%</li>
+                    {% endfor %}
+                </ul>
+
+                <p>Matches by Tournament</p>
+                <ul>
+                    {% for tournament_name, count in combination_stats.matches_by_tournament.items() %}
+                        <li>{{ tournament_name }}: {{ count }} matches</li>
+                    {% endfor %}
+                </ul>
+                <p>Current Win/Loss Streak: {{ combination_stats.win_loss_streak }}</p>
+
+            {% elif all_combinations %}
+                <p>Please select a combination to view statistics.</p>
+            {% else %}
+                <p>No combinations recorded.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

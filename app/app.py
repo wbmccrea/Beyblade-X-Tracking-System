@@ -827,3 +827,155 @@ def calculate_player_stats(player):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+@app.route('/combinations/stats', methods=['GET'])
+def combinations_stats():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
+
+    all_combinations = []
+    combination_stats = None
+    selected_combination = request.args.get('combination', None)
+
+    try:
+        try:
+            cursor.execute("SELECT combination_name, combination_id FROM BeybladeCombinations")
+            all_combinations = [{"name": c[0], "id": c[1]} for c in cursor.fetchall()]
+        except mysql.connector.Error as e:
+            logger.error(f"Error retrieving combinations for dropdown: {e}")
+
+        if selected_combination:
+            try:
+                cursor.execute(f"""
+                    SELECT m.player1_id, m.player2_id,
+                           p.player_name as player1_name, p2.player_name as player2_name,
+                           bc1.combination_name as player1_combination, bc2.combination_name as player2_combination,
+                           m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
+                           t.tournament_name
+                    FROM Matches m
+                    LEFT JOIN Players p ON m.player1_id = p.player_id
+                    LEFT JOIN Players p2 ON m.player2_id = p2.player_id
+                    LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
+                    LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
+                    LEFT JOIN Players w ON m.winner_id = w.player_id
+                    LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
+                    WHERE (m.player1_combination_id = {selected_combination} OR m.player2_combination_id = {selected_combination})
+                    ORDER BY m.match_time DESC
+                """)
+                results = cursor.fetchall()
+            except mysql.connector.Error as e:
+                logger.error(f"Error retrieving match data for combination: {e}")
+                results = []
+
+            combination_data = {int(selected_combination): {"matches": [], "name": None}}
+
+            for row in results:
+                p1_id, p2_id, p1_name, p2_name, p1_comb, p2_comb, finish, winner, time, tournament = row
+                comb_id = int(selected_combination)
+
+                if combination_data[comb_id]["name"] is None:
+                    combination_data[comb_id]["name"] = p1_comb if comb_id == p1_id else p2_comb
+
+                combination_data[comb_id]["matches"].append({
+                    "player1": p1_name,
+                    "player2": p2_name,
+                    "player1_combination": p1_comb,
+                    "player2_combination": p2_comb,
+                    "finish_type": finish,
+                    "winner": winner,
+                    "match_time": time,
+                    "tournament_name": tournament
+                })
+
+            combination_details = combination_data[int(selected_combination)]
+            combination_stats = calculate_combination_stats(combination_details)
+
+    except mysql.connector.Error as e:
+        logger.error(f"Outer database error: {e}")
+        return f"Database error: {e}", 500
+    finally:
+        if conn:
+            conn.close()
+
+    return render_template('combinations_stats.html', all_combinations=all_combinations, selected_combination=selected_combination, combination_stats=combination_stats)
+
+def calculate_combination_stats(combination):
+    matches = combination["matches"]
+    wins = 0
+    losses = 0
+    draws = 0
+    wins_against_each_opponent = Counter()
+    matches_by_tournament = Counter()
+    most_frequent_loss_type = Counter()
+    win_loss_streak = 0
+    current_streak_type = None
+    combination_name = combination["name"]
+
+    for match in matches:
+        player1_used_combination = match["player1_combination"] == combination_name
+        player2_used_combination = match["player2_combination"] == combination_name
+
+        if player1_used_combination:
+            opponent = match["player2"]
+        elif player2_used_combination:
+            opponent = match["player1"]
+        else:
+            continue
+
+        matches_by_tournament[match["tournament_name"]] += 1
+
+        if (player1_used_combination and match["winner"] == match["player1"]) or (player2_used_combination and match["winner"] == match["player2"]):
+            result = "win"
+        elif match["winner"] == "Draw":
+            result = "draw"
+        else:
+            result = "loss"
+
+        if result == "win":
+            wins_against_each_opponent[opponent] += 1
+            wins += 1
+
+            if current_streak_type == "win":
+                win_loss_streak += 1
+            else:
+                current_streak_type = "win"
+                win_loss_streak = 1
+
+        elif result == "draw":
+            draws += 1
+            win_loss_streak = 0
+            current_streak_type = None
+
+        elif result == "loss":
+            losses += 1
+            most_frequent_loss_type[match["finish_type"]] += 1
+
+            if current_streak_type == "loss":
+                win_loss_streak -= 1
+            else:
+                current_streak_type = "loss"
+                win_loss_streak = -1
+
+    total_matches_played = wins + losses + draws
+    win_rate = (wins / total_matches_played) * 100 if total_matches_played > 0 else 0
+    most_frequent_loss = most_frequent_loss_type.most_common(1)[0] if most_frequent_loss_type else None
+
+    win_rate_against_each_opponent = {}
+    for opp, wins_count in wins_against_each_opponent.items():
+        total_matches_against_opp = sum(1 for m in matches if (m["player1"] == opp and player2_used_combination) or (m["player2"] == opp and player1_used_combination))
+        win_rate_against_each_opponent[opp] = (wins_count / total_matches_against_opp) * 100 if total_matches_against_opp > 0 else 0
+
+    return {
+        "name": combination_name,
+        "wins": wins,
+        "losses": losses,
+        "draws": draws,
+        "win_rate": win_rate,
+        "total_matches_played": total_matches_played,
+        "matches_by_tournament": matches_by_tournament,
+        "win_rate_against_each_opponent": win_rate_against_each_opponent,
+        "most_frequent_loss": most_frequent_loss,
+        "win_loss_streak": win_loss_streak
+    }
