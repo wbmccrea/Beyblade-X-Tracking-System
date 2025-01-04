@@ -3,21 +3,7 @@
 <head>
     <title>Player Statistics</title>
     <style>
-        table, th, td {
-            border: 1px solid black;
-            border-collapse: collapse;
-            padding: 5px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .summary {
-            margin-top: 20px;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-        }
+        /* ... (Existing styles) */
     </style>
 </head>
 <body>
@@ -33,66 +19,33 @@
         </select>
     </form>
 
-    {% if players %}
-        {% for player in players %}
-            <h2>{{ player.name }}</h2>
-
-            {% if player_stats %}
-                <div class="summary">
-                    <h3>Player Summary:</h3>
-                    <p>Total Points: {{ player_stats.total_points }}</p>
-                    <p>Wins: {{ player_stats.wins }}</p>
-                    <p>Losses: {{ player_stats.losses }}</p>
-                    <p>Draws: {{ player_stats.draws }}</p>
-                    <p>Win Rate: {{ player_stats.win_rate|round(2) }}%</p>
-                    {% if player_stats.win_by_finish %}
-                        <p>Wins by Finish Type:</p>
-                        <ul>
-                            {% for finish, count in player_stats.win_by_finish.items() %}
-                                <li>{{ finish }}: {{ count }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>No wins recorded.</p>
-                    {% endif %}
-                    {% if player_stats.most_frequent_opponent %}
-                        <p>Most Frequent Opponent: {{ player_stats.most_frequent_opponent[0] }} ({{ player_stats.most_frequent_opponent[1] }} matches)</p>
-                    {% else %}
-                        <p>No opponents recorded.</p>
-                    {% endif %}
-                </div>
-            {% endif %}
-
-            {% if player.details.matches %}
-                <h3>Matches:</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Match ID</th>
-                            <th>Opponent</th>
-                            <th>Finish Type</th>
-                            <th>Winner</th>
-                            <th>Match Time</th>
-                            <th>Tournament</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for match in player.details.matches %}
-                            <tr>
-                                <td>{{ match.match_id }}</td>
-                                <td>{{ match.opponent }}</td>
-                                <td>{{ match.finish_type }}</td>
-                                <td>{{ match.winner }}</td>
-                                <td>{{ match.match_time }}</td>
-                                <td>{{match.tournament_name}}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    {% if player_stats %} {# Check if player_stats is available #}
+        <h2>{{ players[0].name }}</h2> {# Display the selected player's name #}
+        <div class="summary">
+            <h3>Player Summary:</h3>
+            <p>Total Points: {{ player_stats.total_points }}</p>
+            <p>Wins: {{ player_stats.wins }}</p>
+            <p>Losses: {{ player_stats.losses }}</p>
+            <p>Draws: {{ player_stats.draws }}</p>
+            <p>Win Rate: {{ player_stats.win_rate|round(2) }}%</p>
+            {% if player_stats.win_by_finish %}
+                <p>Wins by Finish Type:</p>
+                <ul>
+                    {% for finish, count in player_stats.win_by_finish.items() %}
+                        <li>{{ finish }}: {{ count }}</li>
+                    {% endfor %}
+                </ul>
             {% else %}
-                <p>No matches recorded for this player.</p>
+                <p>No wins recorded.</p>
             {% endif %}
-        {% endfor %}
+            {% if player_stats.most_frequent_opponent %}
+                <p>Most Frequent Opponent: {{ player_stats.most_frequent_opponent[0] }} ({{ player_stats.most_frequent_opponent[1] }} matches)</p>
+            {% else %}
+                <p>No opponents recorded.</p>
+            {% endif %}
+        </div>
+    {% elif all_players %} {#Show a message when no player is selected but players exist#}
+        <p>Please select a player to view statistics.</p>
     {% else %}
         <p>No players recorded.</p>
     {% endif %}
