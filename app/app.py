@@ -1107,12 +1107,19 @@ def leaderboard():
             })
             rank += 1
 
+        try:
+            cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
+            tournaments = cursor.fetchall()
+            tournaments = [dict(zip([column[0] for column in cursor.description], row)) for row in tournaments]
+        except mysql.connector.Error as e:
+            logger.error(f"Error fetching tournaments: {e}")
+            tournaments = []
+
+        return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show, tournament_id=tournament_id, tournaments=tournaments)
+
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
         return f"Database error: {e}", 500
     finally:
         if conn:
             conn.close()
-
-    columns_to_show = request.args.getlist('columns')
-    return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show, tournament_id=tournament_id)
