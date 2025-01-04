@@ -1026,7 +1026,7 @@ def leaderboard():
         for player_id, player_name, wins, losses, draws, points in player_results:
             most_used_combination = "N/A"
             most_common_win_type = "N/A"
-            most_common_loss_type = "N/A"
+            most_common_draw_type = "N/A"
 
             cursor.execute("""
                 SELECT bc.combination_name
@@ -1065,7 +1065,7 @@ def leaderboard():
             """, (player_id, player_id))
             draw_type_result = cursor.fetchone()
             if draw_type_result:
-                most_common_loss_type = draw_type_result[0]
+                most_common_draw_type = draw_type_result[0]
 
             leaderboard_data.append({
                 "rank": rank,
@@ -1076,7 +1076,7 @@ def leaderboard():
                 "draws": draws,
                 "most_used_combination": most_used_combination,
                 "most_common_win_type": most_common_win_type,
-                "most_common_loss_type": most_common_loss_type,
+                "most_common_loss_type": most_common_draw_type,
             })
             rank += 1
 
