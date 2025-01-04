@@ -1146,7 +1146,7 @@ def combination_leaderboard():
         query_params = []
 
         if tournament_id:
-            where_clause = "WHERE m.tournament_id = %s"
+            where_clause = "AND m.tournament_id = %s"
             query_params.append(tournament_id)
 
         main_query = f"""
@@ -1163,7 +1163,6 @@ def combination_leaderboard():
                     FROM Players p 
                     JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id) 
                     WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id) {'AND m2.tournament_id = %s' if tournament_id else ''}
-                    {'AND m2.tournament_id = %s' if tournament_id else ''}
                     GROUP BY p.player_id 
                     ORDER BY COUNT(*) DESC 
                     LIMIT 1) AS most_used_by
@@ -1175,8 +1174,13 @@ def combination_leaderboard():
             LIMIT %s
         """
 
-        query_params_main = query_params + [num_combinations]
-        cursor.execute(main_query, tuple(query_params_main))
+        # Correct parameter handling for the main query
+        main_query_params = []
+        if tournament_id:
+            main_query_params.append(tournament_id)
+        main_query_params.append(num_combinations)
+
+        cursor.execute(main_query, tuple(main_query_params)) # Execute the main query with correct parameters.
         combination_results = cursor.fetchall()
 
         leaderboard_data = []
@@ -1210,4 +1214,4 @@ def combination_leaderboard():
         return f"Database error: {e}", 500
     finally:
         if conn:
-            conn.close()        
+            conn.close()
