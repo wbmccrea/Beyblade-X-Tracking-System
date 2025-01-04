@@ -1004,8 +1004,8 @@ def leaderboard():
         cursor.execute("""
             SELECT p.player_id, p.player_name,
                    COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
-                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.winner_id != p.player_id THEN 1 END) AS losses,
-                   COUNT(CASE WHEN m.player1_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') and m.player2_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') THEN 1 END) AS draws,
+                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.winner_id != p.player_id AND m.draw = FALSE THEN 1 END) AS losses,
+                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.draw = TRUE THEN 1 END) AS draws,
                    SUM(CASE
                        WHEN m.winner_id = p.player_id AND m.finish_type = 'Survivor' THEN 1
                        WHEN m.winner_id = p.player_id AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
@@ -1058,11 +1058,11 @@ def leaderboard():
             cursor.execute("""
                 SELECT m.finish_type
                 FROM Matches m
-                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id != %s
+                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.draw = TRUE
                 GROUP BY m.finish_type
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
-            """, (player_id, player_id, player_id))
+            """, (player_id, player_id))
             loss_type_result = cursor.fetchone()
             if loss_type_result:
                 most_common_loss_type = loss_type_result[0]
@@ -1089,4 +1089,3 @@ def leaderboard():
 
     columns_to_show = request.args.getlist('columns')
     return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show)
-
