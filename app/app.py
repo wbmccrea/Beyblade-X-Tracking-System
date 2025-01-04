@@ -1002,6 +1002,8 @@ def leaderboard():
             num_players = 5
 
         tournament_id = request.args.get('tournament_id')
+        columns_to_show = request.args.getlist('columns')
+
         where_clause = ""
         query_params = [num_players]
 
@@ -1123,3 +1125,4 @@ def leaderboard():
     finally:
         if conn:
             conn.close()
+
