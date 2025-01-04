@@ -3,7 +3,21 @@
 <head>
     <title>Player Statistics</title>
     <style>
-        /* ... (Existing styles) */
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -19,8 +33,8 @@
         </select>
     </form>
 
-    {% if player_stats %} {# Check if player_stats is available #}
-        <h2>{{ players[0].name }}</h2> {# Display the selected player's name #}
+    {% if player_stats %}
+        <h2>{{ players[0].name }}</h2>
         <div class="summary">
             <h3>Player Summary:</h3>
             <p>Total Points: {{ player_stats.total_points }}</p>
@@ -44,7 +58,7 @@
                 <p>No opponents recorded.</p>
             {% endif %}
         </div>
-    {% elif all_players %} {#Show a message when no player is selected but players exist#}
+    {% elif all_players %}
         <p>Please select a player to view statistics.</p>
     {% else %}
         <p>No players recorded.</p>

@@ -705,6 +705,7 @@ def player_stats():
         if selected_player and player_data:
             player_name = list(player_data.keys())[0]
             player_details = player_data[player_name]
+            player_details["name"] = player_name  # Add the name here!
             player_stats = calculate_player_stats(player_details)
         else:
             player_stats = None
@@ -717,6 +718,7 @@ def player_stats():
             conn.close()
 
     return render_template('player_stats.html', players=players, all_players=all_players, selected_player=selected_player, player_stats=player_stats)
+
 
 def calculate_player_stats(player):
     matches = player["matches"]
@@ -758,3 +760,6 @@ def calculate_player_stats(player):
         "total_points": total_points,
         "most_frequent_opponent":most_frequent_opponent
     }
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
