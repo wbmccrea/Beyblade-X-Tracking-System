@@ -906,7 +906,7 @@ def calculate_combination_stats(combination):
     wins = 0
     losses = 0
     draws = 0
-    wins_against_each_opponent = Counter()
+    opponent_stats = {}  # Store both wins and total matches against each opponent
     matches_by_tournament = Counter()
     most_frequent_loss_type = Counter()
     win_loss_streak = 0
@@ -936,8 +936,8 @@ def calculate_combination_stats(combination):
             result = "loss"
 
         if result == "win":
-            wins_against_each_opponent[opponent] += 1
             wins += 1
+            opponent_stats.setdefault(opponent, {"wins": 0, "total": 0})["wins"] += 1
             if current_streak_type == "win":
                 win_loss_streak += 1
             else:
@@ -955,15 +955,15 @@ def calculate_combination_stats(combination):
             else:
                 current_streak_type = "loss"
                 win_loss_streak = -1
+        opponent_stats.setdefault(opponent, {"wins": 0, "total": 0})["total"] += 1
 
     total_matches_played = wins + losses + draws
     win_rate = (wins / total_matches_played) * 100 if total_matches_played > 0 else 0
     most_frequent_loss = most_frequent_loss_type.most_common(1)[0] if most_frequent_loss_type else None
 
     win_rate_against_each_opponent = {}
-    for opponent, wins_count in wins_against_each_opponent.items():
-        total_matches_against_opp = sum(1 for m in matches if (m["player1"] == opponent and player2_used_combination) or (m["player2"] == opponent and player1_used_combination))
-        win_rate_against_each_opponent[opponent] = (wins_count / total_matches_against_opp) * 100 if total_matches_against_opp > 0 else 0
+    for opponent, stats in opponent_stats.items():
+        win_rate_against_each_opponent[opponent] = (stats["wins"] / stats["total"]) * 100 if stats["total"] > 0 else 0
 
     return {
         "name": combination_name,
