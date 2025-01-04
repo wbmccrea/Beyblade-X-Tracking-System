@@ -643,71 +643,76 @@ def player_stats():
         return "Database connection error", 500
     cursor = conn.cursor()
 
-    players = []
     all_players = []
     player_stats = None
     selected_player = request.args.get('player', None)
 
     try:
+        # Get all players for the dropdown
         try:
             cursor.execute("SELECT player_name, player_id FROM Players")
             all_players = [{"name": p[0], "id": p[1]} for p in cursor.fetchall()]
         except mysql.connector.Error as e:
             logger.error(f"Error retrieving players for dropdown: {e}")
 
-        where_clause = ""
         if selected_player:
-            where_clause = f"WHERE (m.player1_id = {selected_player} OR m.player2_id = {selected_player})"
-
-        try:
-            if selected_player:
+            try:
                 cursor.execute(f"""
-                    SELECT m.player1_id, m.player2_id, p1.player_name AS opponent_name,
+                    SELECT m.player1_id, m.player2_id,
+                           m.player1_combination_id, m.player2_combination_id,
+                           p.player_name as player1_name, p2.player_name as player2_name,
+                           bc1.combination_name as player1_combination_name, bc2.combination_name as player2_combination_name,
+                           lt1.launcher_name as player1_launcher, lt2.launcher_name as player2_launcher,
                            m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
                            t.tournament_name
                     FROM Matches m
-                    LEFT JOIN Players p1 ON (CASE WHEN {selected_player} = m.player1_id THEN m.player2_id ELSE m.player1_id END) = p1.player_id
+                    LEFT JOIN Players p ON m.player1_id = p.player_id
+                    LEFT JOIN Players p2 ON m.player2_id = p2.player_id
+                    LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
+                    LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
+                    LEFT JOIN LauncherTypes lt1 ON m.player1_launcher_id = lt1.launcher_id
+                    LEFT JOIN LauncherTypes lt2 ON m.player2_launcher_id = lt2.launcher_id
                     LEFT JOIN Players w ON m.winner_id = w.player_id
                     LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
-                    {where_clause}
+                    WHERE (m.player1_id = {selected_player} OR m.player2_id = {selected_player})
                     AND m.player1_id != m.player2_id
                     ORDER BY m.match_time DESC
                 """)
                 results = cursor.fetchall()
-            else:
+            except mysql.connector.Error as e:
+                logger.error(f"Error retrieving player/match data: {e}")
                 results = []
 
-        except mysql.connector.Error as e:
-            logger.error(f"Error retrieving player/match data: {e}")
-            results = []
+            player_data = {int(selected_player): {"matches": [], "name": None}}
 
-        player_data = {}
-        if selected_player: #only try to get the player data if a player is selected
-            player_id = int(selected_player)
-            player_data[player_id] = {
-                "matches": [],
-                "name": None
-            }
             for row in results:
-                player1_id, player2_id, opponent_name, finish_type, winner_name, match_time, tournament_name = row
+                p1_id, p2_id, p1_comb_id, p2_comb_id, p1_name, p2_name, p1_comb_name, p2_comb_name, p1_launcher, p2_launcher, finish, winner, time, tournament = row
+                player_id = int(selected_player)
+
+                if player_data[player_id]["name"] is None:
+                    player_data[player_id]["name"] = p1_name if player_id == p1_id else p2_name
+
+                opponent_name = p2_name if player_id == p1_id else p1_name
+                player_combination = p1_comb_name if player_id == p1_id else p2_comb_name
+                player_launcher = p1_launcher if player_id == p1_id else p2_launcher
+
                 player_data[player_id]["matches"].append({
                     "opponent": opponent_name,
-                    "finish_type": finish_type,
-                    "winner": winner_name,
-                    "match_time": match_time,
-                    "tournament_name": tournament_name
+                    "finish_type": finish,
+                    "winner": winner,
+                    "match_time": time,
+                    "tournament_name": tournament,
+                    "player1": p1_name,
+                    "player2": p2_name,
+                    "player1_combination": p1_comb_name,
+                    "player2_combination": p2_comb_name,
+                    "player1_launcher": p1_launcher,
+                    "player2_launcher": p2_launcher
                 })
-            if player_data[player_id]["name"] is None:
-                if player_id: #only try to get the name if the id exists
-                    cursor.execute("SELECT player_name FROM Players WHERE player_id = %s",(player_id,))
-                    player_data[player_id]["name"] = cursor.fetchone()[0]
 
-        if selected_player and player_data:
-            player_id = int(selected_player)
-            player_details = player_data[player_id]
+            player_details = player_data[int(selected_player)]
             player_stats = calculate_player_stats(player_details)
-        else:
-            player_stats = None
+        
 
     except mysql.connector.Error as e:
         logger.error(f"Outer database error: {e}")
@@ -716,7 +721,9 @@ def player_stats():
         if conn:
             conn.close()
 
-    return render_template('player_stats.html', players=players, all_players=all_players, selected_player=selected_player, player_stats=player_stats)
+    return render_template('player_stats.html', all_players=all_players, selected_player=selected_player, player_stats=player_stats)
+
+
 
 
 def calculate_player_stats(player):
@@ -732,7 +739,7 @@ def calculate_player_stats(player):
     wins_against_each_opponent = Counter()
     matches_by_tournament = Counter()
     win_loss_streak = 0
-    current_streak_type = None  # "win" or "loss"
+    current_streak_type = None
 
     for match in matches:
         opponent = match["opponent"]
@@ -766,7 +773,6 @@ def calculate_player_stats(player):
             total_points += points
             win_by_finish[match["finish_type"]] += 1
 
-            # Streak Calculation
             if current_streak_type == "win":
                 win_loss_streak += 1
             else:
@@ -775,11 +781,10 @@ def calculate_player_stats(player):
 
         elif result == "draw":
             draws += 1
-            win_loss_streak = 0 #reset streak on draw
+            win_loss_streak = 0
             current_streak_type = None
 
         elif result == "loss":
-            # Streak Calculation
             losses += 1
             if current_streak_type == "loss":
                 win_loss_streak -= 1
@@ -800,7 +805,6 @@ def calculate_player_stats(player):
         win_rate_against_each_opponent[opp] = (wins_count / total_matches_against_opp) * 100 if total_matches_against_opp > 0 else 0
 
     least_frequent_opponent = opponents.most_common()[-1] if opponents else None
-
 
     return {
         "name": player.get("name"),
