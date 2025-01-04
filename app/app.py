@@ -997,7 +997,7 @@ def leaderboard():
     cursor = conn.cursor()
 
     try:
-        num_players = int(request.args.get('num_players', 5))  # Default to 5
+        num_players = int(request.args.get('num_players', 5))
         if num_players < 1:
             num_players = 5
 
@@ -1016,22 +1016,63 @@ def leaderboard():
         player_results = cursor.fetchall()
 
         leaderboard_data = []
-        rank = 1  # Initialize rank counter
+        rank = 1
         for player_id, player_name, wins, losses, draws, points in player_results:
-            # ... (Existing code to get most used combination, win type, loss type)
+            most_used_combination = "N/A" #Set default value
+            most_common_win_type = "N/A" #Set default value
+            most_common_loss_type = "N/A" #Set default value
+
+            cursor.execute("""
+                SELECT bc.combination_name
+                FROM Matches m
+                JOIN BeybladeCombinations bc ON (
+                    (m.player1_id = %s AND m.player1_combination_id = bc.combination_id) OR
+                    (m.player2_id = %s AND m.player2_combination_id = bc.combination_id)
+                )
+                GROUP BY bc.combination_name
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+            """, (player_id, player_id))
+            combination_result = cursor.fetchone()
+            if combination_result:
+                most_used_combination = combination_result[0]
+
+            cursor.execute("""
+                SELECT m.finish_type
+                FROM Matches m
+                WHERE m.winner_id = %s
+                GROUP BY m.finish_type
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+            """, (player_id,))
+            win_type_result = cursor.fetchone()
+            if win_type_result:
+                most_common_win_type = win_type_result[0]
+
+            cursor.execute("""
+                SELECT m.finish_type
+                FROM Matches m
+                WHERE (m.player1_id = %s OR m.player2_id = %s) AND m.winner_id != %s and m.winner_id != (select player_id from Players where player_name = 'Draw')
+                GROUP BY m.finish_type
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+            """, (player_id, player_id, player_id))
+            loss_type_result = cursor.fetchone()
+            if loss_type_result:
+                most_common_loss_type = loss_type_result[0]
 
             leaderboard_data.append({
-                "rank": rank, #add rank to the data
+                "rank": rank,
                 "name": player_name,
-                "points": points, #move points up
+                "points": points,
                 "wins": wins,
                 "losses": losses,
                 "draws": draws,
-                "most_used_combination": most_used_combination[0] if most_used_combination else "N/A",
-                "most_common_win_type": most_common_win_type[0] if most_common_win_type else "N/A",
-                "most_common_loss_type": most_common_loss_type[0] if most_common_loss_type else "N/A",
+                "most_used_combination": most_used_combination,
+                "most_common_win_type": most_common_win_type,
+                "most_common_loss_type": most_common_loss_type,
             })
-            rank += 1 #Increment the rank
+            rank += 1
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
@@ -1041,6 +1082,6 @@ def leaderboard():
             conn.close()
 
     columns_to_show = request.args.getlist('columns')
-
     return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show)
+
 
