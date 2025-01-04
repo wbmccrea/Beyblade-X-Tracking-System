@@ -919,14 +919,16 @@ def calculate_combination_stats(combination):
 
         if player1_used_combination:
             opponent = match["player2"]
+            player_won = match["winner"] == match["player1"]
         elif player2_used_combination:
             opponent = match["player1"]
+            player_won = match["winner"] == match["player2"]
         else:
             continue
 
         matches_by_tournament[match["tournament_name"]] += 1
 
-        if (player1_used_combination and match["winner"] == match["player1"]) or (player2_used_combination and match["winner"] == match["player2"]):
+        if player_won:
             result = "win"
         elif match["winner"] == "Draw":
             result = "draw"
@@ -936,22 +938,18 @@ def calculate_combination_stats(combination):
         if result == "win":
             wins_against_each_opponent[opponent] += 1
             wins += 1
-
             if current_streak_type == "win":
                 win_loss_streak += 1
             else:
                 current_streak_type = "win"
                 win_loss_streak = 1
-
         elif result == "draw":
             draws += 1
             win_loss_streak = 0
             current_streak_type = None
-
         elif result == "loss":
             losses += 1
             most_frequent_loss_type[match["finish_type"]] += 1
-
             if current_streak_type == "loss":
                 win_loss_streak -= 1
             else:
@@ -963,9 +961,9 @@ def calculate_combination_stats(combination):
     most_frequent_loss = most_frequent_loss_type.most_common(1)[0] if most_frequent_loss_type else None
 
     win_rate_against_each_opponent = {}
-    for opp, wins_count in wins_against_each_opponent.items():
-        total_matches_against_opp = sum(1 for m in matches if (m["player1"] == opp and player2_used_combination) or (m["player2"] == opp and player1_used_combination))
-        win_rate_against_each_opponent[opp] = (wins_count / total_matches_against_opp) * 100 if total_matches_against_opp > 0 else 0
+    for opponent, wins_count in wins_against_each_opponent.items():
+        total_matches_against_opp = sum(1 for m in matches if (m["player1"] == opponent and player2_used_combination) or (m["player2"] == opponent and player1_used_combination))
+        win_rate_against_each_opponent[opponent] = (wins_count / total_matches_against_opp) * 100 if total_matches_against_opp > 0 else 0
 
     return {
         "name": combination_name,
