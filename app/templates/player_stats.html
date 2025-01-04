@@ -3,10 +3,13 @@
 <head>
     <title>Player Statistics</title>
     <style>
+        body {
+            font-family: sans-serif;
+        }
         table, th, td {
             border: 1px solid black;
             border-collapse: collapse;
-            padding: 5px;
+            padding: 8px;
             text-align: left;
         }
         th {
@@ -17,6 +20,13 @@
             border: 1px solid #ccc;
             padding: 10px;
             border-radius: 5px;
+        }
+        ul {
+            list-style-type: none; /* Remove bullet points */
+            padding: 0;
+        }
+        li {
+            margin-bottom: 5px; /* Add some spacing between list items */
         }
     </style>
 </head>
@@ -38,10 +48,12 @@
         <div class="summary">
             <h3>Player Summary:</h3>
             <p>Total Points: {{ player_stats.total_points }}</p>
+            <p>Total Matches Played: {{ player_stats.total_matches_played }}</p>
             <p>Wins: {{ player_stats.wins }}</p>
             <p>Losses: {{ player_stats.losses }}</p>
             <p>Draws: {{ player_stats.draws }}</p>
             <p>Win Rate: {{ player_stats.win_rate|round(2) }}%</p>
+            <p>Current Win/Loss Streak: {{ player_stats.win_loss_streak }}</p>
 
             {% if player_stats.win_by_finish %}
             <p>Wins by Finish Type:</p>
@@ -59,6 +71,53 @@
             {% else %}
             <p>No opponents recorded.</p>
             {% endif %}
+
+            {% if player_stats.most_used_combination %}
+                <p>Most Used Combination: {{ player_stats.most_used_combination[0] }} ({{ player_stats.most_used_combination[1] }} times)</p>
+            {% else %}
+                <p>No combinations used.</p>
+            {% endif %}
+
+            {% if player_stats.most_used_launcher %}
+                <p>Most Used Launcher: {{ player_stats.most_used_launcher[0] }} ({{ player_stats.most_used_launcher[1] }} times)</p>
+            {% else %}
+                <p>No launchers used.</p>
+            {% endif %}
+
+            {% if player_stats.favorite_win_type %}
+                <p>Favorite Win Type: {{ player_stats.favorite_win_type[0] }} ({{ player_stats.favorite_win_type[1] }} times)</p>
+            {% else %}
+                <p>No favorite win type recorded.</p>
+            {% endif %}
+
+            {% if player_stats.least_frequent_opponent %}
+                <p>Least Frequent Opponent: {{player_stats.least_frequent_opponent[0]}} ({{player_stats.least_frequent_opponent[1]}} matches)</p>
+            {% else %}
+                <p>No opponents recorded.</p>
+            {% endif %}
+
+            {% if player_stats.matches_by_tournament %}
+                <p>Matches by Tournament</p>
+                <ul>
+                    {% for tournament, count in player_stats.matches_by_tournament.items() %}
+                        <li>{{ tournament }}: {{ count }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No matches recorded in any tournaments.</p>
+            {% endif %}
+
+            {% if player_stats.win_rate_against_each_opponent %}
+                <p>Win Rate Against Each Opponent</p>
+                <ul>
+                    {% for opponent, winrate in player_stats.win_rate_against_each_opponent.items() %}
+                        <li>{{ opponent }}: {{ winrate|round(2) }}%</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No opponents recorded to calculate win rates.</p>
+            {% endif %}
+
         </div>
     {% elif all_players %}
         <p>Please select a player to view statistics.</p>

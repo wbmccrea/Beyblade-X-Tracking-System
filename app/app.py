@@ -727,10 +727,23 @@ def calculate_player_stats(player):
     win_by_finish = Counter()
     total_points = 0
     opponents = Counter()
+    combinations_used = Counter()
+    launchers_used = Counter()
+    wins_against_each_opponent = Counter()
+    matches_by_tournament = Counter()
+    win_loss_streak = 0
+    current_streak_type = None  # "win" or "loss"
 
     for match in matches:
         opponent = match["opponent"]
         opponents[opponent] += 1
+        matches_by_tournament[match["tournament_name"]] += 1
+        if player["name"] == match["player1"]:
+            combinations_used[match["player1_combination"]] += 1
+            launchers_used[match["player1_launcher"]] += 1
+        elif player["name"] == match["player2"]:
+            combinations_used[match["player2_combination"]] += 1
+            launchers_used[match["player2_launcher"]] += 1
 
         if match["winner"] == player["name"]:
             result = "win"
@@ -740,6 +753,7 @@ def calculate_player_stats(player):
             result = "loss"
 
         if result == "win":
+            wins_against_each_opponent[opponent] += 1
             if match["finish_type"] == "Survivor":
                 points = 1
             elif match["finish_type"] in ("Burst", "KO"):
@@ -751,15 +765,45 @@ def calculate_player_stats(player):
             wins += 1
             total_points += points
             win_by_finish[match["finish_type"]] += 1
+
+            # Streak Calculation
+            if current_streak_type == "win":
+                win_loss_streak += 1
+            else:
+                current_streak_type = "win"
+                win_loss_streak = 1
+
         elif result == "draw":
             draws += 1
-        elif result == "loss":
-            losses += 1
+            win_loss_streak = 0 #reset streak on draw
+            current_streak_type = None
 
+        elif result == "loss":
+            # Streak Calculation
+            losses += 1
+            if current_streak_type == "loss":
+                win_loss_streak -= 1
+            else:
+                current_streak_type = "loss"
+                win_loss_streak = -1
+
+    total_matches_played = wins + losses + draws
     win_rate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0
     most_frequent_opponent = opponents.most_common(1)[0] if opponents else None
+    most_used_combination = combinations_used.most_common(1)[0] if combinations_used else None
+    most_used_launcher = launchers_used.most_common(1)[0] if launchers_used else None
+    favorite_win_type = win_by_finish.most_common(1)[0] if win_by_finish else None
+
+    win_rate_against_each_opponent = {}
+    for opp, wins_count in wins_against_each_opponent.items():
+        total_matches_against_opp = opponents[opp]
+        win_rate_against_each_opponent[opp] = (wins_count / total_matches_against_opp) * 100 if total_matches_against_opp > 0 else 0
+
+    least_frequent_opponent = opponents.most_common()[-1] if opponents else None
+
 
     return {
+        "name": player.get("name"),
         "wins": wins,
         "losses": losses,
         "draws": draws,
@@ -767,7 +811,14 @@ def calculate_player_stats(player):
         "win_by_finish": win_by_finish,
         "total_points": total_points,
         "most_frequent_opponent": most_frequent_opponent,
-        "name": player.get("name")
+        "total_matches_played": total_matches_played,
+        "matches_by_tournament": matches_by_tournament,
+        "most_used_combination": most_used_combination,
+        "most_used_launcher": most_used_launcher,
+        "win_rate_against_each_opponent": win_rate_against_each_opponent,
+        "least_frequent_opponent": least_frequent_opponent,
+        "favorite_win_type": favorite_win_type,
+        "win_loss_streak": win_loss_streak
     }
 
 if __name__ == '__main__':
