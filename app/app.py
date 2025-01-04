@@ -649,66 +649,63 @@ def player_stats():
     selected_player = request.args.get('player', None)
 
     try:
-        # Get all players for the dropdown
         try:
             cursor.execute("SELECT player_name, player_id FROM Players")
             all_players = [{"name": p[0], "id": p[1]} for p in cursor.fetchall()]
         except mysql.connector.Error as e:
             logger.error(f"Error retrieving players for dropdown: {e}")
 
-        # Construct WHERE clause for filtering
         where_clause = ""
         if selected_player:
             where_clause = f"WHERE (m.player1_id = {selected_player} OR m.player2_id = {selected_player})"
 
-        # Get Player and Match Data (Corrected Query)
         try:
-            cursor.execute(f"""
-                SELECT p.player_name, m.match_id,
-                       p1.player_name AS opponent_name,
-                       m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
-                       t.tournament_name
-                FROM Players p
-                LEFT JOIN Matches m ON (p.player_id = m.player1_id OR p.player_id = m.player2_id)
-                LEFT JOIN Players p1 ON (CASE WHEN p.player_id = m.player1_id THEN m.player2_id ELSE m.player1_id END) = p1.player_id
-                LEFT JOIN Players w ON m.winner_id = w.player_id
-                LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
-                {where_clause}
-                AND m.player1_id != m.player2_id  -- Exclude self-matches
-                ORDER BY m.match_time DESC
-            """)
-            results = cursor.fetchall()
+            if selected_player:
+                cursor.execute(f"""
+                    SELECT m.player1_id, m.player2_id, p1.player_name AS opponent_name,
+                           m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
+                           t.tournament_name
+                    FROM Matches m
+                    LEFT JOIN Players p1 ON (CASE WHEN {selected_player} = m.player1_id THEN m.player2_id ELSE m.player1_id END) = p1.player_id
+                    LEFT JOIN Players w ON m.winner_id = w.player_id
+                    LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
+                    {where_clause}
+                    AND m.player1_id != m.player2_id
+                    ORDER BY m.match_time DESC
+                """)
+                results = cursor.fetchall()
+            else:
+                results = []
+
         except mysql.connector.Error as e:
             logger.error(f"Error retrieving player/match data: {e}")
             results = []
 
         player_data = {}
-        for row in results:
-            player_name, match_id, opponent_name, finish_type, winner_name, match_time, tournament_name = row
-            if player_name not in player_data:
-                player_data[player_name] = {
-                    "matches": []
-                }
-            if match_id:
-                player_data[player_name]["matches"].append({
-                    "match_id": match_id,
+        if selected_player: #only try to get the player data if a player is selected
+            player_id = int(selected_player)
+            player_data[player_id] = {
+                "matches": [],
+                "name": None
+            }
+            for row in results:
+                player1_id, player2_id, opponent_name, finish_type, winner_name, match_time, tournament_name = row
+                player_data[player_id]["matches"].append({
                     "opponent": opponent_name,
                     "finish_type": finish_type,
                     "winner": winner_name,
                     "match_time": match_time,
                     "tournament_name": tournament_name
                 })
-
-        players = []
-        for name, details in player_data.items():
-            players.append({"name": name, "details": details})
+            if player_data[player_id]["name"] is None:
+                if player_id: #only try to get the name if the id exists
+                    cursor.execute("SELECT player_name FROM Players WHERE player_id = %s",(player_id,))
+                    player_data[player_id]["name"] = cursor.fetchone()[0]
 
         if selected_player and player_data:
-            player_name = list(player_data.keys())[0]
-            player_details = player_data[player_name]
-            player_details["name"] = player_name
+            player_id = int(selected_player)
+            player_details = player_data[player_id]
             player_stats = calculate_player_stats(player_details)
-            player_stats["name"] = player_name  # Add the name here!
         else:
             player_stats = None
 
@@ -770,7 +767,7 @@ def calculate_player_stats(player):
         "win_by_finish": win_by_finish,
         "total_points": total_points,
         "most_frequent_opponent": most_frequent_opponent,
-        "name": player.get("name") #ensure the name is passed back
+        "name": player.get("name")
     }
 
 if __name__ == '__main__':
