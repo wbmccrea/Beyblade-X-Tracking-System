@@ -55,7 +55,7 @@
                     {% if tournament_stats.win_rate_by_finish %}
                         <p>Win Rate by Finish Type:</p>
                         <ul>
-                            {% for finish, rate in tournament_stats.win_rate_by_finish.items() %}
+                            {% for finish, rate in tournament_stats.win_rate_by_finish %}
                                 <li>{{ finish }}: {{ rate|round(2) }}%</li>
                             {% endfor %}
                         </ul>
@@ -77,7 +77,7 @@
                     <h3>Player Points:</h3>
                     {% if tournament_stats.player_points %}
                         <ul>
-                            {% for player, points in tournament_stats.player_points.items() %}
+                            {% for player, points in tournament_stats.player_points %}
                                 <li>{{ player }}: {{ points }} points</li>
                             {% endfor %}
                         </ul>
@@ -90,7 +90,7 @@
             {% if tournament.details.matches %}
                 <h3>Matches:</h3>
                 <table>
-                    <thead> {# Added table header #}
+                    <thead>
                         <tr>
                             <th>Match ID</th>
                             <th>Player 1</th>
@@ -104,7 +104,7 @@
                             <th>Match Time</th>
                         </tr>
                     </thead>
-                    <tbody> {# Added table body and rows #}
+                    <tbody>
                         {% for match in tournament.details.matches %}
                             <tr>
                                 <td>{{ match.match_id }}</td>
@@ -120,7 +120,7 @@
                             </tr>
                         {% endfor %}
                     </tbody>
-                </table>
+                </table> {# Closing table tag added #}
             {% else %}
                 <p>No matches recorded for this tournament.</p>
             {% endif %}
@@ -131,13 +131,13 @@
 
     <h2>Overall Standings</h2>
     <table>
-        <thead> {# Added table header #}
+        <thead>
             <tr>
                 <th>Player</th>
                 <th>Total Wins</th>
             </tr>
         </thead>
-        <tbody> {# Added table body and rows #}
+        <tbody>
             {% for standing in overall_standings %}
             <tr>
                 <td>{{standing.player}}</td>
@@ -145,7 +145,7 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+    </table> {# Closing table tag added #}
 
 </body>
 </html>

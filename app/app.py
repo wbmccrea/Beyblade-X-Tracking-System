@@ -6,6 +6,7 @@ from datetime import datetime
 from urllib.parse import unquote
 import logging
 from collections import Counter
+import operator
 
 load_dotenv()
 
@@ -566,10 +567,8 @@ def calculate_tournament_stats(tournament):
     players = set()
     combinations = set()
     finish_types = Counter()
-    wins_by_finish = Counter()
     num_draws = 0
-    num_wins = 0
-    player_points = Counter() #added player points
+    player_points = Counter()
 
     for match in matches:
         players.add(match["player1"])
@@ -579,32 +578,48 @@ def calculate_tournament_stats(tournament):
         launchers_used[(match["player1"], match["player1_launcher"])] += 1
         launchers_used[(match["player2"], match["player2_launcher"])] += 1
         finish_types[match["finish_type"]] += 1
+
         if match["winner"] == "Draw":
             num_draws += 1
-        else:
-            wins_by_finish[match["finish_type"]] += 1
-            num_wins += 1
+        elif match["winner"]: #check for a winner
+            if match["finish_type"] == "Survivor":
+                points = 1
+            elif match["finish_type"] == "Burst":
+                points = 2
+            elif match["finish_type"] == "KO":
+                points = 2
+            elif match["finish_type"] == "Extreme":
+                points = 3
+            else:
+                points = 0 # Default to 0 if finish type is unknown
+
+            player_points[match["winner"]] += points
             player_wins[match["winner"]] += 1
             if match["winner"] == match["player1"]:
                 combination_wins[match["player1_combination"]] += 1
-                player_points[match["player1"]] += 3 #add points for player 1
-                player_points[match["player2"]] += 0 #add points for player 2
             else:
                 combination_wins[match["player2_combination"]] += 1
-                player_points[match["player2"]] += 3 #add points for player 2
-                player_points[match["player1"]] += 0 #add points for player 1
-    
+
     winning_player_by_wins = player_wins.most_common(1)[0] if player_wins else None
     winning_combination_by_wins = combination_wins.most_common(1)[0] if combination_wins else None
     most_common_combination = combination_wins.most_common(1)[0] if combination_wins else None
     most_common_launcher = launchers_used.most_common(1)[0] if launchers_used else None
     most_common_finish_type = finish_types.most_common(1)[0] if finish_types else None
-
+    num_wins = sum(player_wins.values())
     win_rate_by_finish = {}
     if num_wins > 0:
+        wins_by_finish = Counter()
+        for match in matches:
+            if match["winner"] != "Draw" and match["winner"]:
+                wins_by_finish[match["finish_type"]] += 1
         for finish, count in wins_by_finish.items():
             win_rate_by_finish[finish] = (count / num_wins) * 100
 
+    # Sort Player Points (Largest to Smallest)
+    sorted_player_points = sorted(player_points.items(), key=operator.itemgetter(1), reverse=True) if player_points else None
+
+    # Sort Win Rate by Finish Type (Largest to Smallest)
+    sorted_win_rate_by_finish = sorted(win_rate_by_finish.items(), key=operator.itemgetter(1), reverse=True) if win_rate_by_finish else None
     return {
         "num_players": len(players),
         "num_combinations": len(combinations),
@@ -616,7 +631,7 @@ def calculate_tournament_stats(tournament):
         "most_common_launcher": most_common_launcher,
         "most_common_finish_type": most_common_finish_type,
         "num_draws": num_draws,
-        "win_rate_by_finish": win_rate_by_finish,
-        "total_matches": len(matches), #added total matches
-        "player_points": player_points, #added player points
+        "win_rate_by_finish": sorted_win_rate_by_finish,
+        "total_matches": len(matches),
+        "player_points": sorted_player_points,
     }
