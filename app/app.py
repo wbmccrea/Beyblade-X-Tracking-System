@@ -1005,7 +1005,7 @@ def leaderboard():
             SELECT p.player_id, p.player_name,
                    COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
                    COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.winner_id != p.player_id THEN 1 END) AS losses,
-                   COUNT(CASE WHEN m.winner_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') AND (m.player1_id = p.player_id OR m.player2_id = p.player_id) THEN 1 END) AS draws,
+                   COUNT(CASE WHEN m.player1_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') and m.player2_id = (SELECT player_id FROM Players WHERE player_name = 'Draw') THEN 1 END) AS draws,
                    SUM(CASE
                        WHEN m.winner_id = p.player_id AND m.finish_type = 'Survivor' THEN 1
                        WHEN m.winner_id = p.player_id AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
@@ -1089,5 +1089,4 @@ def leaderboard():
 
     columns_to_show = request.args.getlist('columns')
     return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show)
-
 
