@@ -1003,16 +1003,16 @@ def leaderboard():
 
         tournament_id = request.args.get('tournament_id')
         where_clause = ""
-        query_params = [num_players]  # Initialize query parameters
+        query_params = [num_players]
 
         if tournament_id:
             where_clause = "WHERE m.tournament_id = %s"
-            query_params.insert(0, tournament_id) #add tournament_id to the query params
+            query_params.insert(0, tournament_id)
 
         cursor.execute(f"""
             SELECT p.player_id, p.player_name,
                    COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
-                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.draw = FALSE AND m.winner_id IS NOT NULL THEN 1 END) AS losses,
+                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.winner_id != p.player_id AND m.draw = FALSE AND m.winner_id IS NOT NULL THEN 1 END) AS losses,
                    COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.draw = TRUE THEN 1 END) AS draws,
                    SUM(CASE
                        WHEN m.winner_id = p.player_id AND m.finish_type = 'Survivor' THEN 1
@@ -1037,21 +1037,20 @@ def leaderboard():
             most_common_win_type = "N/A"
             most_common_loss_type = "N/A"
 
-            combination_query_params = (player_id, player_id)
-            win_type_query_params = (player_id,)
-            loss_type_query_params = (player_id, player_id, player_id)
+            combination_query_params = [player_id, player_id]
+            win_type_query_params = [player_id]
+            loss_type_query_params = [player_id, player_id, player_id]
+            combination_where_clause = ""
+            win_type_where_clause = ""
+            loss_type_where_clause = ""
 
             if tournament_id:
                 combination_where_clause = "AND m.tournament_id = %s"
                 win_type_where_clause = "AND m.tournament_id = %s"
                 loss_type_where_clause = "AND m.tournament_id = %s"
-                combination_query_params += (tournament_id,)
-                win_type_query_params += (tournament_id,)
-                loss_type_query_params += (tournament_id,)
-            else:
-                combination_where_clause = ""
-                win_type_where_clause = ""
-                loss_type_where_clause = ""
+                combination_query_params.append(tournament_id)
+                win_type_query_params.append(tournament_id)
+                loss_type_query_params.append(tournament_id)
 
             cursor.execute(f"""
                 SELECT bc.combination_name
@@ -1064,7 +1063,7 @@ def leaderboard():
                 GROUP BY bc.combination_name
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
-            """, combination_query_params)
+            """, tuple(combination_query_params))
             combination_result = cursor.fetchone()
             if combination_result:
                 most_used_combination = combination_result[0]
@@ -1077,7 +1076,7 @@ def leaderboard():
                 GROUP BY m.finish_type
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
-            """, win_type_query_params)
+            """, tuple(win_type_query_params))
             win_type_result = cursor.fetchone()
             if win_type_result:
                 most_common_win_type = win_type_result[0]
@@ -1090,7 +1089,7 @@ def leaderboard():
                 GROUP BY m.finish_type
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
-            """, loss_type_query_params)
+            """, tuple(loss_type_query_params))
             loss_type_result = cursor.fetchone()
             if loss_type_result:
                 most_common_loss_type = loss_type_result[0]
