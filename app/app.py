@@ -499,7 +499,7 @@ def tournament_stats():
             results = cursor.fetchall()
         except mysql.connector.Error as e:
             logger.error(f"Error retrieving tournament/match data: {e}")
-            results = [] #set to empty list to avoid errors
+            results = []
 
         # Process Tournament and Match Data
         tournaments_data = {}
@@ -524,13 +524,18 @@ def tournament_stats():
                     "winner": winner_name,
                     "match_time": match_time
                 })
-        tournaments = [{"name": name, "details": details} for name, details in tournaments_data.items()]
+
+        tournaments = [] #reset the list to only include the selected tournament data
+        for name, details in tournaments_data.items():
+            tournaments.append({"name": name, "details": details})
 
         if selected_tournament and tournaments_data:
-            tournament_name = list(tournaments_data.keys())[0]  # Get the selected tournament name
+            tournament_name = list(tournaments_data.keys())[0]
             tournament_details = tournaments_data[tournament_name]
             tournament_stats = calculate_tournament_stats(tournament_details)
-        
+        else:
+            tournament_stats = None
+
         #Overall Standings
         try:
             cursor.execute("""
@@ -545,7 +550,7 @@ def tournament_stats():
             logger.error(f"Error retrieving overall standings: {e}")
 
     except mysql.connector.Error as e:
-        logger.error(f"Outer database error: {e}") #catch any other errors
+        logger.error(f"Outer database error: {e}")
         return f"Database error: {e}", 500
     finally:
         if conn:
