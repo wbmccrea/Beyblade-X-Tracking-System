@@ -906,7 +906,7 @@ def calculate_combination_stats(combination):
     wins = 0
     losses = 0
     draws = 0
-    opponent_stats = {}  # Store both wins and total matches against each opponent
+    opponent_stats = {}
     matches_by_tournament = Counter()
     most_frequent_loss_type = Counter()
     win_loss_streak = 0
@@ -917,6 +917,17 @@ def calculate_combination_stats(combination):
         player1_used_combination = match["player1_combination"] == combination_name
         player2_used_combination = match["player2_combination"] == combination_name
 
+        if player1_used_combination and player2_used_combination: #handle combination vs combination matches
+            if match["winner"] == "Draw":
+                draws += 1
+            elif match["winner"] == match["player1"]:
+                wins += 1
+            else:
+                losses += 1
+            matches_by_tournament[match["tournament_name"]] += 1
+            continue
+
+
         if player1_used_combination:
             opponent = match["player2"]
             player_won = match["winner"] == match["player1"]
@@ -924,7 +935,7 @@ def calculate_combination_stats(combination):
             opponent = match["player1"]
             player_won = match["winner"] == match["player2"]
         else:
-            continue
+            continue  # Skip if the combination wasn't used in this match
 
         matches_by_tournament[match["tournament_name"]] += 1
 
@@ -935,9 +946,10 @@ def calculate_combination_stats(combination):
         else:
             result = "loss"
 
+        opponent_stats.setdefault(opponent, {"wins": 0, "total": 0})["total"] += 1
         if result == "win":
+            opponent_stats[opponent]["wins"] += 1
             wins += 1
-            opponent_stats.setdefault(opponent, {"wins": 0, "total": 0})["wins"] += 1
             if current_streak_type == "win":
                 win_loss_streak += 1
             else:
@@ -955,7 +967,6 @@ def calculate_combination_stats(combination):
             else:
                 current_streak_type = "loss"
                 win_loss_streak = -1
-        opponent_stats.setdefault(opponent, {"wins": 0, "total": 0})["total"] += 1
 
     total_matches_played = wins + losses + draws
     win_rate = (wins / total_matches_played) * 100 if total_matches_played > 0 else 0
