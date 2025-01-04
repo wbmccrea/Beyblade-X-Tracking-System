@@ -1004,7 +1004,7 @@ def leaderboard():
         cursor.execute("""
             SELECT p.player_id, p.player_name,
                    COUNT(CASE WHEN m.winner_id = p.player_id THEN 1 END) AS wins,
-                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.winner_id != p.player_id AND m.draw = FALSE THEN 1 END) AS losses,
+                   COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.draw = FALSE AND m.winner_id IS NOT NULL THEN 1 END) AS losses,
                    COUNT(CASE WHEN (m.player1_id = p.player_id OR m.player2_id = p.player_id) AND m.draw = TRUE THEN 1 END) AS draws,
                    SUM(CASE
                        WHEN m.winner_id = p.player_id AND m.finish_type = 'Survivor' THEN 1
@@ -1063,9 +1063,9 @@ def leaderboard():
                 ORDER BY COUNT(*) DESC
                 LIMIT 1
             """, (player_id, player_id))
-            loss_type_result = cursor.fetchone()
-            if loss_type_result:
-                most_common_loss_type = loss_type_result[0]
+            draw_type_result = cursor.fetchone()
+            if draw_type_result:
+                most_common_loss_type = draw_type_result[0]
 
             leaderboard_data.append({
                 "rank": rank,
