@@ -1085,4 +1085,3 @@ def leaderboard():
     columns_to_show = request.args.getlist('columns')
     return render_template('leaderboard.html', leaderboard_data=leaderboard_data, num_players=num_players, columns_to_show=columns_to_show)
 
-
