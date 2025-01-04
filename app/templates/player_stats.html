@@ -34,7 +34,7 @@
     </form>
 
     {% if player_stats %}
-        <h2>{{ players[0].name }}</h2>
+        <h2>{{ player_stats.name }}</h2>
         <div class="summary">
             <h3>Player Summary:</h3>
             <p>Total Points: {{ player_stats.total_points }}</p>
@@ -42,20 +42,22 @@
             <p>Losses: {{ player_stats.losses }}</p>
             <p>Draws: {{ player_stats.draws }}</p>
             <p>Win Rate: {{ player_stats.win_rate|round(2) }}%</p>
+
             {% if player_stats.win_by_finish %}
-                <p>Wins by Finish Type:</p>
-                <ul>
-                    {% for finish, count in player_stats.win_by_finish.items() %}
-                        <li>{{ finish }}: {{ count }}</li>
-                    {% endfor %}
-                </ul>
+            <p>Wins by Finish Type:</p>
+            <ul>
+                {% for finish, count in player_stats.win_by_finish.items() %}
+                <li>{{ finish }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>No wins recorded.</p>
+            <p>No wins recorded.</p>
             {% endif %}
+
             {% if player_stats.most_frequent_opponent %}
-                <p>Most Frequent Opponent: {{ player_stats.most_frequent_opponent[0] }} ({{ player_stats.most_frequent_opponent[1] }} matches)</p>
+            <p>Most Frequent Opponent: {{ player_stats.most_frequent_opponent[0] }} ({{ player_stats.most_frequent_opponent[1] }} matches)</p>
             {% else %}
-                <p>No opponents recorded.</p>
+            <p>No opponents recorded.</p>
             {% endif %}
         </div>
     {% elif all_players %}
