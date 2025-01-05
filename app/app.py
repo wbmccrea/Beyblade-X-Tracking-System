@@ -1132,7 +1132,7 @@ def combination_leaderboard():
     conn = get_db_connection()
     if conn is None:
         return "Database connection error", 500
-    cursor = conn.cursor(dictionary=True) # Use dictionary cursor
+    cursor = conn.cursor(dictionary=True)
 
     try:
         num_combinations = int(request.args.get('num_combinations', 5))
@@ -1176,7 +1176,7 @@ def combination_leaderboard():
                     ORDER BY player_count DESC
                     LIMIT 1) AS most_used_by
             FROM BeybladeCombinations bc
-            JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
+            INNER JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
             %s
             GROUP BY bc.combination_id, bc.combination_name
             ORDER BY points DESC, usage_count DESC
