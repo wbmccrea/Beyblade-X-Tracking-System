@@ -1141,9 +1141,9 @@ def combination_leaderboard():
 
         tournament_id = request.args.get('tournament_id')
 
-        base_query = """
+        query = """
             SELECT bc.combination_id, bc.combination_name,
-                   COUNT(*) AS usage_count,
+                   COUNT(m.match_id) AS usage_count,
                    SUM(CASE WHEN m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id THEN 1
                             WHEN m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id THEN 1
                             ELSE 0 END) AS wins,
@@ -1160,23 +1160,18 @@ def combination_leaderboard():
                         WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
                         ELSE 0
                     END) AS points,
-                   (SELECT player_name FROM (
-                        SELECT p.player_name, COUNT(*) AS player_count
-                        FROM Players p
-                        INNER JOIN Matches m2 ON p.player_id = m2.player1_id AND m2.player1_combination_id = bc.combination_id
-                        %s
-                        GROUP BY p.player_name
+                   (SELECT p.player_name
+                    FROM Players p
+                    INNER JOIN (
+                        SELECT player1_id AS player_id, player1_combination_id AS combination_id FROM Matches %s
                         UNION ALL
-                        SELECT p.player_name, COUNT(*)
-                        FROM Players p
-                        INNER JOIN Matches m2 ON p.player_id = m2.player2_id AND m2.player2_combination_id = bc.combination_id
-                        %s
-                        GROUP BY p.player_name
-                    ) AS player_counts
-                    ORDER BY player_count DESC
-                    LIMIT 1) AS most_used_by
+                        SELECT player2_id, player2_combination_id FROM Matches %s
+                    ) AS player_combinations ON p.player_id = player_combinations.player_id
+                    WHERE player_combinations.combination_id = bc.combination_id
+                    GROUP BY p.player_name ORDER BY COUNT(*) DESC LIMIT 1
+                   ) AS most_used_by
             FROM BeybladeCombinations bc
-            INNER JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
+            LEFT JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
             %s
             GROUP BY bc.combination_id, bc.combination_name
             ORDER BY points DESC, usage_count DESC
@@ -1188,13 +1183,13 @@ def combination_leaderboard():
         main_query_condition = ""
 
         if tournament_id:
-            subquery_condition = "AND m2.tournament_id = %s"
-            main_query_condition = "AND m.tournament_id = %s"
+            subquery_condition = "WHERE tournament_id = %s"
+            main_query_condition = "WHERE tournament_id = %s"
             query_params.extend([tournament_id, tournament_id, tournament_id])
 
         query_params.append(num_combinations)
 
-        query = base_query % (subquery_condition, subquery_condition, main_query_condition, "%s")
+        query = query % (subquery_condition, subquery_condition, main_query_condition, "%s")
         cursor.execute(query, tuple(query_params))
 
         combination_results = cursor.fetchall()
@@ -1227,3 +1222,5 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
