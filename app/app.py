@@ -1271,25 +1271,11 @@ def calculate_combination_type_stats(matches):
         matchup_key = tuple(sorted((p1_type, p2_type)))
         type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
 
-        # Determine which player won based on combination type
-        if p1_type != p2_type: # only check this if they are different types
-            if winner in (p1_type, p2_type):
-                if winner == p1_type:
-                    type_matchups[matchup_key]["p1_wins"] += 1
-                else:
-                    type_matchups[matchup_key]["p2_wins"] += 1
-        else: # if the types are the same, determine which player won based on which type was used
-            p1_won = False
-            for p1_type_check, p2_type_check, winner_check, draw_check in matches:
-                if p1_type_check == p1_type and p2_type_check == p2_type and winner_check is not None and not draw_check:
-                    if winner_check == p1_type:
-                        p1_won = True
-                        break
-            if p1_won:
-                type_matchups[matchup_key]["p1_wins"] += 1
-            else:
-                type_matchups[matchup_key]["p2_wins"] += 1
-
+        # Correctly determine the winner based on player names
+        if winner == p1_type:
+            type_matchups[matchup_key]["p1_wins"] += 1
+        elif winner == p2_type:
+            type_matchups[matchup_key]["p2_wins"] += 1
 
     most_common_type = type_usage.most_common(1)[0] if type_usage else None
 
@@ -1305,4 +1291,3 @@ def calculate_combination_type_stats(matches):
         "type_usage": type_usage,
         "type_matchups": type_matchups
     }
-
