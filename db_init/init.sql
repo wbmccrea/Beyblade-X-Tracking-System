@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS Blades (
     canonical_name VARCHAR(255),
     blade_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'None'),
     spin_direction ENUM('Right-Spin', 'Left-Spin', 'Dual-Spin'),
-    blade_weight DECIMAL(4, 1) NULL
+    blade_weight DECIMAL(4, 1) DEFAULT NULL
 );
 
 -- Create the Ratchets table
@@ -26,24 +26,24 @@ CREATE TABLE IF NOT EXISTS Ratchets (
     ratchet_name VARCHAR(255) UNIQUE,
     ratchet_protrusions INT,
     ratchet_height INT,
-    ratchet_weight DECIMAL(4, 1) NULL
+    ratchet_weight DECIMAL(4, 1) DEFAULT NULL
 );
 
--- Modify the Bits table to add full_bit_name and bit_type
+-- Create the Bits table (with bit_type)
 CREATE TABLE IF NOT EXISTS Bits (
     bit_id INT AUTO_INCREMENT PRIMARY KEY,
     bit_name VARCHAR(255) UNIQUE,
     full_bit_name VARCHAR(255),
-    bit_weight DECIMAL(4, 1) NULL,
-    bit_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'Unknown') DEFAULT 'Unknown' -- Added bit_type
+    bit_weight DECIMAL(4, 1) DEFAULT NULL,
+    bit_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'Unknown') DEFAULT 'Unknown'
 );
 
--- No longer needed: Drop the Stats table
+-- Drop the Stats table (no longer needed)
 DROP TABLE IF EXISTS Stats;
 
--- Modify the BitStats table (simplified)
+-- Create the BitStats table (simplified, bit_id is primary key)
 CREATE TABLE IF NOT EXISTS BitStats (
-    bit_id INT PRIMARY KEY,  -- bit_id is now the sole primary key
+    bit_id INT PRIMARY KEY,
     attack DECIMAL(5, 2) DEFAULT NULL,
     defense DECIMAL(5, 2) DEFAULT NULL,
     stamina DECIMAL(5, 2) DEFAULT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS BitStats (
     FOREIGN KEY (bit_id) REFERENCES Bits(bit_id)
 );
 
--- Modify the BladeStats table (simplified)
+-- Create the BladeStats table (simplified, bit_id is primary key)
 CREATE TABLE IF NOT EXISTS BladeStats (
     blade_id INT PRIMARY KEY,
     attack DECIMAL(5, 2) DEFAULT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS BladeStats (
     FOREIGN KEY (blade_id) REFERENCES Blades(blade_id)
 );
 
--- Modify the RatchetStats table (simplified)
+-- Create the RatchetStats table (simplified, bit_id is primary key)
 CREATE TABLE IF NOT EXISTS RatchetStats (
     ratchet_id INT PRIMARY KEY,
     attack DECIMAL(5, 2) DEFAULT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS BeybladeCombinations (
     bit_id INT,
     combination_name VARCHAR(255) UNIQUE,
     combination_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'Unknown'),
-    combination_weight DECIMAL(5, 2) NULL,
+    combination_weight DECIMAL(5, 2) DEFAULT NULL,
     FOREIGN KEY (blade_id) REFERENCES Blades(blade_id),
     FOREIGN KEY (ratchet_id) REFERENCES Ratchets(ratchet_id),
     FOREIGN KEY (bit_id) REFERENCES Bits(bit_id)
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS Tournaments (
     end_date TIMESTAMP
 );
 
--- Create the Matches table
+-- Create the Matches table (with the 'draw' column)
 CREATE TABLE IF NOT EXISTS Matches (
     match_id INT AUTO_INCREMENT PRIMARY KEY,
     tournament_id INT,
@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS Matches (
     winner_id INT,
     finish_type ENUM('Draw', 'Survivor', 'KO', 'Burst', 'Extreme'),
     match_time TIMESTAMP,
+    draw TINYINT(1) DEFAULT 0,  -- Added 'draw' column with default value
     FOREIGN KEY (tournament_id) REFERENCES Tournaments(tournament_id),
     FOREIGN KEY (player1_id) REFERENCES Players(player_id),
     FOREIGN KEY (player2_id) REFERENCES Players(player_id),
