@@ -1237,7 +1237,6 @@ def combinations_types_stats():
 
     try:
         with conn.cursor() as cursor:
-            #Get all matches
             cursor.execute("""
                 SELECT bc1.combination_type, bc2.combination_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.draw
                 FROM Matches m
@@ -1257,7 +1256,7 @@ def combinations_types_stats():
 
     return render_template('combinations_types.html', type_stats=type_stats)
 
-def calculate_combination_type_stats(matches_data):  # Renamed to avoid confusion
+def calculate_combination_type_stats(matches_data):
     type_usage = Counter()
     type_matchups = {}
 
@@ -1271,12 +1270,10 @@ def calculate_combination_type_stats(matches_data):  # Renamed to avoid confusio
         matchup_key = tuple(sorted((p1_type, p2_type)))
         type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
 
-        # Correctly determine the winner based on player names
-        if winner_name is not None:
-            if winner_name == p1_type:
-                type_matchups[matchup_key]["p1_wins"] += 1
-            elif winner_name == p2_type:
-                type_matchups[matchup_key]["p2_wins"] += 1
+        if winner_name == p1_type:
+            type_matchups[matchup_key]["p1_wins"] += 1
+        elif winner_name == p2_type:
+            type_matchups[matchup_key]["p2_wins"] += 1
 
     most_common_type = type_usage.most_common(1)[0] if type_usage else None
 
