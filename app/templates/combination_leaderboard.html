@@ -27,7 +27,7 @@
         th {
             background-color: #f0f0f0;
             font-weight: bold;
-            cursor: pointer; /* Make table headers clickable */
+            cursor: pointer;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -75,7 +75,7 @@
                 <thead>
                     <tr>
                         {% if 'rank' in columns_to_show %}<th onclick="sortTable(0)">Rank</th>{% endif %}
-                        <th onclick="sortTable(1)">Combination</th>
+                        {% if 'name' in columns_to_show %}<th onclick="sortTable(1)">Combination</th>{% endif %}
                         {% if 'usage_count' in columns_to_show %}<th onclick="sortTable(2)">Usage Count</th>{% endif %}
                         {% if 'wins' in columns_to_show %}<th onclick="sortTable(3)">Wins</th>{% endif %}
                         {% if 'losses' in columns_to_show %}<th onclick="sortTable(4)">Losses</th>{% endif %}
@@ -85,11 +85,11 @@
                         {% if 'most_used_by' in columns_to_show %}<th onclick="sortTable(8)">Most Used By</th>{% endif %}
                     </tr>
                 </thead>
-                <tbody id="leaderboardTableBody">
+                <tbody>
                     {% for combination in leaderboard_data %}
                         <tr>
                             {% if 'rank' in columns_to_show %}<td>{{ combination.rank }}</td>{% endif %}
-                            <td>{{ combination.name }}</td>
+                            {% if 'name' in columns_to_show %}<td>{{ combination.name }}</td>{% endif %}
                             {% if 'usage_count' in columns_to_show %}<td>{{ combination.usage_count }}</td>{% endif %}
                             {% if 'wins' in columns_to_show %}<td>{{ combination.wins }}</td>{% endif %}
                             {% if 'losses' in columns_to_show %}<td>{{ combination.losses }}</td>{% endif %}
@@ -105,7 +105,61 @@
     </div>
 
     <script>
-        // ... (The sortTable() JavaScript function from previous responses)
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.querySelector(".module table tbody");
+            if (!table) return;
+
+            switching = true;
+            dir = "asc";
+
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 0; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    if (!x || !y) continue;
+
+                    if (dir == "asc") {
+                        if (n === 0 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6 || n === 7) { //Numeric Columns
+                            if (Number(x.innerHTML) > Number(y.innerHTML)) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else { // String Columns
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    } else if (dir == "desc") {
+                        if (n === 0 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6 || n === 7) { //Numeric Columns
+                            if (Number(x.innerHTML) < Number(y.innerHTML)) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else { // String Columns
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
     </script>
 </body>
 </html>
