@@ -1189,7 +1189,7 @@ def combination_leaderboard():
             main_query_params.append(tournament_id)
         main_query_params.append(num_combinations)
 
-        cursor.execute(main_query, tuple(main_query_params)) # Execute the main query with correct parameters.
+        cursor.execute(main_query, tuple(main_query_params))
         combination_results = cursor.fetchall()
 
         leaderboard_data = []
