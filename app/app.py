@@ -1184,7 +1184,7 @@ def combination_leaderboard():
         if tournament_id:
             subquery_condition = "AND m2.tournament_id = %s"
             main_query_condition = "AND m.tournament_id = %s"
-            query_params.append(tournament_id)
+            query_params.extend([tournament_id, tournament_id])
 
         query_params.append(num_combinations)
 
