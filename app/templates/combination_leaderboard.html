@@ -40,7 +40,6 @@
                 <input type="checkbox" name="columns" value="points" {% if 'points' in columns_to_show %}checked{% endif %}> Points<br>
                 <input type="checkbox" name="columns" value="win_rate" {% if 'win_rate' in columns_to_show %}checked{% endif %}> Win Rate<br>
                 <input type="checkbox" name="columns" value="most_used_by" {% if 'most_used_by' in columns_to_show %}checked{% endif %}> Most Used By<br>
-
                 <button type="submit">Update Leaderboard</button>
             </form>
         </div>
@@ -48,30 +47,30 @@
             <table>
                 <thead>
                     <tr>
-                        {% if 'rank' in columns_to_show %}<th onclick="sortTable(0)">Rank</th>{% endif %}
-                        {% if 'name' in columns_to_show %}<th onclick="sortTable(1)">Combination</th>{% endif %}
-                        {% if 'usage_count' in columns_to_show %}<th onclick="sortTable(2)">Usage Count</th>{% endif %}
-                        {% if 'wins' in columns_to_show %}<th onclick="sortTable(3)">Wins</th>{% endif %}
-                        {% if 'losses' in columns_to_show %}<th onclick="sortTable(4)">Losses</th>{% endif %}
-                        {% if 'draws' in columns_to_show %}<th onclick="sortTable(5)">Draws</th>{% endif %}
-                        {% if 'points' in columns_to_show %}<th onclick="sortTable(6)">Points</th>{% endif %}
-                        {% if 'win_rate' in columns_to_show %}<th onclick="sortTable(7)">Win Rate</th>{% endif %}
-                        {% if 'most_used_by' in columns_to_show %}<th onclick="sortTable(8)">Most Used By</th>{% endif %}
+                        {% if 'rank' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('rank') }})">Rank</th>{% endif %}
+                        {% if 'name' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('name') }})">Combination</th>{% endif %}
+                        {% if 'usage_count' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('usage_count') }})">Usage Count</th>{% endif %}
+                        {% if 'wins' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('wins') }})">Wins</th>{% endif %}
+                        {% if 'losses' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('losses') }})">Losses</th>{% endif %}
+                        {% if 'draws' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('draws') }})">Draws</th>{% endif %}
+                        {% if 'points' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('points') }})">Points</th>{% endif %}
+                        {% if 'win_rate' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('win_rate') }})">Win Rate</th>{% endif %}
+                        {% if 'most_used_by' in columns_to_show %}<th onclick="sortTable({{ columns_to_show.index('most_used_by') }})">Most Used By</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for combination in leaderboard_data %}
-                        <tr>
-                            {% if 'rank' in columns_to_show %}<td>{{ combination.rank }}</td>{% endif %}
-                            {% if 'name' in columns_to_show %}<td>{{ combination.name }}</td>{% endif %}
-                            {% if 'usage_count' in columns_to_show %}<td>{{ combination.usage_count }}</td>{% endif %}
-                            {% if 'wins' in columns_to_show %}<td>{{ combination.wins }}</td>{% endif %}
-                            {% if 'losses' in columns_to_show %}<td>{{ combination.losses }}</td>{% endif %}
-                            {% if 'draws' in columns_to_show %}<td>{{ combination.draws }}</td>{% endif %}
-                            {% if 'points' in columns_to_show %}<td>{{ combination.points }}</td>{% endif %}
-                            {% if 'win_rate' in columns_to_show %}<td>{{ combination.win_rate|round(2) }}%</td>{% endif %}
-                            {% if 'most_used_by' in columns_to_show %}<td>{{ combination.most_used_by }}</td>{% endif %}
-                        </tr>
+                    <tr>
+                        {% if 'rank' in columns_to_show %}<td>{{ combination.rank }}</td>{% endif %}
+                        {% if 'name' in columns_to_show %}<td>{{ combination.name }}</td>{% endif %}
+                        {% if 'usage_count' in columns_to_show %}<td>{{ combination.usage_count }}</td>{% endif %}
+                        {% if 'wins' in columns_to_show %}<td>{{ combination.wins }}</td>{% endif %}
+                        {% if 'losses' in columns_to_show %}<td>{{ combination.losses }}</td>{% endif %}
+                        {% if 'draws' in columns_to_show %}<td>{{ combination.draws }}</td>{% endif %}
+                        {% if 'points' in columns_to_show %}<td>{{ combination.points }}</td>{% endif %}
+                        {% if 'win_rate' in columns_to_show %}<td>{{ combination.win_rate|round(2) }}%</td>{% endif %}
+                        {% if 'most_used_by' in columns_to_show %}<td>{{ combination.most_used_by }}</td>{% endif %}
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -109,6 +108,7 @@
                         xValue = x.textContent.toLowerCase();
                         yValue = y.textContent.toLowerCase();
                     }
+
                     if (isNaN(xValue)) xValue = -Infinity;
                     if (isNaN(yValue)) yValue = -Infinity;
 
