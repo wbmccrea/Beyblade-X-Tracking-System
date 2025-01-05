@@ -3,36 +3,9 @@
 <head>
     <title>Combination Leaderboard</title>
     <style>
-        /* Basic CSS for styling the table */
-        body {
-            font-family: sans-serif;
-        }
-        .container {
-            width: 80%;
-            margin: 0 auto;
-        }
-        h1 {
-            text-align: center;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-        }
+        /* ... (Your existing CSS styles) */
         th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .module {
-            margin-bottom: 20px;
+            cursor: pointer; /* Make table headers clickable */
         }
     </style>
 </head>
@@ -40,52 +13,21 @@
     <div class="container">
         <h1>Beyblade X Combination Leaderboard</h1>
         <div class="module">
-            <a href="/">Home</a>
-        </div>
-        <div class="module">
-            <form method="GET" action="/combination_leaderboard">
-                <label for="num_combinations">Number of Combinations:</label>
-                <input type="number" name="num_combinations" id="num_combinations" value="{{ num_combinations }}" min="1">
-                <br>
-                <label for="tournament_id">Tournament:</label>
-                <select name="tournament_id" id="tournament_id">
-                    <option value="">Overall</option>
-                    {% for tournament in tournaments %}
-                        <option value="{{ tournament.tournament_id }}" {% if tournament_id == tournament.tournament_id|string %}selected{% endif %}>
-                            {{ tournament.tournament_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <br>
-                <label>Columns to Show:</label><br>
-                <input type="checkbox" name="columns" value="rank" {% if 'rank' in columns_to_show %}checked{% endif %}> Rank<br>
-                <input type="checkbox" name="columns" value="usage_count" {% if 'usage_count' in columns_to_show %}checked{% endif %}> Usage Count<br>
-                <input type="checkbox" name="columns" value="wins" {% if 'wins' in columns_to_show %}checked{% endif %}> Wins<br>
-                <input type="checkbox" name="columns" value="losses" {% if 'losses' in columns_to_show %}checked{% endif %}> Losses<br>
-                <input type="checkbox" name="columns" value="draws" {% if 'draws' in columns_to_show %}checked{% endif %}> Draws<br>
-                <input type="checkbox" name="columns" value="points" {% if 'points' in columns_to_show %}checked{% endif %}> Points<br>
-                <input type="checkbox" name="columns" value="win_rate" {% if 'win_rate' in columns_to_show %}checked{% endif %}> Win Rate<br>
-                <input type="checkbox" name="columns" value="most_used_by" {% if 'most_used_by' in columns_to_show %}checked{% endif %}> Most Used By<br>
-                <button type="submit">Update Leaderboard</button>
-            </form>
-        </div>
-        <div class="module">
             <table>
                 <thead>
                     <tr>
-                        {% if 'rank' in columns_to_show %}<th>Rank</th>{% endif %}
-                        <th>Combination</th>
-                        {% if 'usage_count' in columns_to_show %}<th>Usage Count</th>{% endif %}
-                        {% if 'wins' in columns_to_show %}<th>Wins</th>{% endif %}
-                        {% if 'losses' in columns_to_show %}<th>Losses</th>{% endif %}
-                        {% if 'draws' in columns_to_show %}<th>Draws</th>{% endif %}
-                        {% if 'points' in columns_to_show %}<th>Points</th>{% endif %}
-                        {% if 'win_rate' in columns_to_show %}<th>Win Rate</th>{% endif %}
-                        {% if 'most_used_by' in columns_to_show %}<th>Most Used By</th>{% endif %}
+                        {% if 'rank' in columns_to_show %}<th onclick="sortTable(0)">Rank</th>{% endif %}
+                        <th onclick="sortTable(1)">Combination</th>
+                        {% if 'usage_count' in columns_to_show %}<th onclick="sortTable(2)">Usage Count</th>{% endif %}
+                        {% if 'wins' in columns_to_show %}<th onclick="sortTable(3)">Wins</th>{% endif %}
+                        {% if 'losses' in columns_to_show %}<th onclick="sortTable(4)">Losses</th>{% endif %}
+                        {% if 'draws' in columns_to_show %}<th onclick="sortTable(5)">Draws</th>{% endif %}
+                        {% if 'points' in columns_to_show %}<th onclick="sortTable(6)">Points</th>{% endif %}
+                        {% if 'win_rate' in columns_to_show %}<th onclick="sortTable(7)">Win Rate</th>{% endif %}
+                        {% if 'most_used_by' in columns_to_show %}<th onclick="sortTable(8)">Most Used By</th>{% endif %}
                     </tr>
                 </thead>
-                <tbody>
-                    {% for combination in leaderboard_data %}
+                <tbody id="leaderboardTableBody">  {% for combination in leaderboard_data %}
                         <tr>
                             {% if 'rank' in columns_to_show %}<td>{{ combination.rank }}</td>{% endif %}
                             <td>{{ combination.name }}</td>
@@ -102,5 +44,78 @@
             </table>
         </div>
     </div>
+
+    <script>
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("leaderboardTableBody"); // Get the tbody element
+            switching = true;
+            // Set the sorting direction to ascending:
+            dir = "asc";
+            /* Make a loop that will continue until
+            no switching has been done: */
+            while (switching) {
+                // start by saying: no switching is done:
+                switching = false;
+                rows = table.rows;
+                /* Loop through all table rows (except the
+                first, which contains table headers): */
+                for (i = 0; i < (rows.length - 1); i++) {
+                    // start by saying there should be no switching:
+                    shouldSwitch = false;
+                    /* Get the two elements you want to compare,
+                    one from current row and one from the next: */
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    /* check if you should switch rows,
+                    based on the sorting direction: */
+                    if (dir == "asc") {
+                        if (n == 0 || n == 2 || n == 3 || n == 4 || n == 5 || n == 6 || n == 7) {
+                            if (Number(x.innerHTML) > Number(y.innerHTML)) {
+                                shouldSwitch= true;
+                                break;
+                            }
+                        }
+                        else{
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                // If so, mark as a switch and break the loop:
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    } else if (dir == "desc") {
+                        if (n == 0 || n == 2 || n == 3 || n == 4 || n == 5 || n == 6 || n == 7) {
+                            if (Number(x.innerHTML) < Number(y.innerHTML)) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                        else{
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                // If so, mark as a switch and break the loop:
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    /* If a switch has been marked, make the switch
+                    and mark that a switch has been done: */
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    // Each time a switch is done, increase this count by 1:
+                    switchcount++;
+                } else {
+                    /* If no switching has been done AND the direction is "asc",
+                    set the direction to "desc" and run the while loop again. */
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
