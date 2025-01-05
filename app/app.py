@@ -1228,3 +1228,71 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/combinations/types', methods=['GET'])
+def combinations_types_stats():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+
+    try:
+        with conn.cursor() as cursor:
+            #Get all matches
+            cursor.execute("""
+                SELECT bc1.combination_type, bc2.combination_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.draw
+                FROM Matches m
+                LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
+                LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
+                LEFT JOIN Players w ON m.winner_id = w.player_id
+            """)
+            matches = cursor.fetchall()
+            type_stats = calculate_combination_type_stats(matches)
+
+    except mysql.connector.Error as e:
+        logger.error(f"Database error: {e}")
+        return f"Database error: {e}", 500
+    finally:
+        if conn:
+            conn.close()
+
+    return render_template('combinations_types.html', type_stats=type_stats)
+
+def calculate_combination_type_stats(matches):
+    type_usage = Counter()
+    type_matchups = {}
+
+    for p1_type, p2_type, winner, draw in matches:
+        type_usage[p1_type] += 1
+        type_usage[p2_type] += 1
+
+        if draw:
+            continue
+
+        matchup_key = tuple(sorted((p1_type, p2_type))) #ensures order does not matter
+        type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
+        if winner == "Draw":
+            continue
+        elif winner is not None:
+            if winner in (p1_type, p2_type):
+                if winner == p1_type:
+                    type_matchups[matchup_key]["p1_wins"] += 1
+                else:
+                    type_matchups[matchup_key]["p2_wins"] += 1
+            else:
+                continue
+
+    most_common_type = type_usage.most_common(1)[0] if type_usage else None
+
+    matchup_win_rates = {}
+    for (type1, type2), stats in type_matchups.items():
+        total = stats["total"]
+        matchup_win_rates[(type1, type2)] = {
+            type1: (stats["p1_wins"] / total) * 100 if total > 0 else 0,
+            type2: (stats["p2_wins"] / total) * 100 if total > 0 else 0
+        }
+    return {
+        "most_common_type": most_common_type,
+        "type_usage": type_usage,
+        "type_matchups": type_matchups,
+        "matchup_win_rates": matchup_win_rates
+    }
