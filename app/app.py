@@ -1149,7 +1149,7 @@ def combination_leaderboard():
             where_clause = "AND m.tournament_id = %s"
             query_params.append(tournament_id)
 
-        main_query = f"""
+        main_query = """
             SELECT bc.combination_id, bc.combination_name,
                    COUNT(*) AS usage_count,
                    SUM(CASE WHEN m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id THEN 1
@@ -1172,25 +1172,31 @@ def combination_leaderboard():
                     FROM Players p
                     INNER JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id)
                     WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id)
-                    {'AND m2.tournament_id = %s' if tournament_id else ''}
+                    %s
                     GROUP BY p.player_id
                     ORDER BY COUNT(*) DESC
                     LIMIT 1) AS most_used_by
             FROM BeybladeCombinations bc
             JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
-            {where_clause}
+            %s
             GROUP BY bc.combination_id, bc.combination_name
             ORDER BY points DESC, usage_count DESC
             LIMIT %s
         """
 
         main_query_params = []
+        tournament_condition = ""
         if tournament_id:
-            main_query_params.extend([tournament_id])
+            tournament_condition = "AND m2.tournament_id = %s"
+            where_clause = "AND m.tournament_id = %s"
+            main_query_params.append(tournament_id)
 
         main_query_params.append(num_combinations)
 
-        cursor.execute(main_query, tuple(main_query_params))
+        formatted_query = main_query % (tournament_condition, where_clause, "%s")
+        cursor.execute(formatted_query, tuple(main_query_params))
+
+
         combination_results = cursor.fetchall()
 
         leaderboard_data = []
@@ -1229,3 +1235,5 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+    
