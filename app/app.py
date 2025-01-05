@@ -1261,21 +1261,31 @@ def calculate_combination_type_stats(matches):
     type_usage = Counter()
     type_matchups = {}
 
-    for p1_type, p2_type, winner, draw in matches:
+    for p1_type, p2_type, winner_name, draw in matches: #winner_name now used
         type_usage[p1_type] += 1
         type_usage[p2_type] += 1
 
-        if draw or winner is None:
+        if draw or winner_name == 'Draw': #handle draws
             continue
 
         matchup_key = tuple(sorted((p1_type, p2_type)))
         type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
 
-        # Correctly determine the winner based on player names
-        if winner == p1_type:
-            type_matchups[matchup_key]["p1_wins"] += 1
-        elif winner == p2_type:
-            type_matchups[matchup_key]["p2_wins"] += 1
+        # Determine which player won based on player names
+        #This is the most direct and accurate way to count wins for each type in a matchup.
+        if winner_name is not None:
+            #Get the combination used by the winner
+            for p1_type_check, p2_type_check, winner_check, draw_check in matches:
+                if winner_check == winner_name and not draw_check:
+                    if winner_check == p1_type_check:
+                        winner_type = p1_type_check
+                    else:
+                        winner_type = p2_type_check
+                    if winner_type == p1_type:
+                        type_matchups[matchup_key]["p1_wins"] += 1
+                    elif winner_type == p2_type:
+                        type_matchups[matchup_key]["p2_wins"] += 1
+                    break
 
     most_common_type = type_usage.most_common(1)[0] if type_usage else None
 
