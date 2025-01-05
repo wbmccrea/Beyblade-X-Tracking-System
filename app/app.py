@@ -1170,16 +1170,9 @@ def combination_leaderboard():
                     END) AS points,
                    (SELECT p.player_name
                     FROM Players p
-                    INNER JOIN (
-                        SELECT m2.player1_id AS player_id, m2.tournament_id
-                        FROM Matches m2
-                        WHERE m2.player1_combination_id = bc.combination_id
-                        UNION ALL
-                        SELECT m2.player2_id, m2.tournament_id
-                        FROM Matches m2
-                        WHERE m2.player2_combination_id = bc.combination_id
-                    ) AS player_matches ON p.player_id = player_matches.player_id
-                    {'WHERE player_matches.tournament_id = %s' if tournament_id else ''}
+                    INNER JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id)
+                    WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id)
+                    {'AND m2.tournament_id = %s' if tournament_id else ''}
                     GROUP BY p.player_id
                     ORDER BY COUNT(*) DESC
                     LIMIT 1
@@ -1214,11 +1207,10 @@ def combination_leaderboard():
                 "losses": losses,
                 "draws": draws,
                 "points": points,
-                "most_used_by": most_used_by or "N/A",  # Handle NULLs
+                "most_used_by": most_used_by or "N/A",
                 "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
             })
             rank += 1
-
         try:
             cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
             tournaments = cursor.fetchall()
@@ -1226,8 +1218,9 @@ def combination_leaderboard():
         except mysql.connector.Error as e:
             logger.error(f"Error fetching tournaments: {e}")
             tournaments = []
-            
+
         return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, columns_to_show=columns_to_show, tournament_id=tournament_id, tournaments=tournaments)
+
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
@@ -1239,3 +1232,4 @@ def combination_leaderboard():
 if __name__ == '__main__':
     app.run(debug=True)
 
+    
