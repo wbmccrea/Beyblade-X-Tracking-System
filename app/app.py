@@ -1179,7 +1179,7 @@ def combination_leaderboard():
             JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
             {where_clause}
             GROUP BY bc.combination_id, bc.combination_name
-            ORDER BY usage_count DESC
+            ORDER BY points DESC, usage_count DESC
             LIMIT %s
         """
 
@@ -1227,3 +1227,4 @@ def combination_leaderboard():
     finally:
         if conn:
             conn.close()
+

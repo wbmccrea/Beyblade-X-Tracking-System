@@ -124,26 +124,27 @@
     
                     let xValue, yValue;
     
-                    if (n === 0 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6) { // Numeric Columns (excluding Win Rate)
-                        xValue = Number(x.textContent); // Use textContent!
-                        yValue = Number(y.textContent); // Use textContent!
+                    if (n === 0 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6) { // Numeric Columns
+                        xValue = Number(x.textContent);
+                        yValue = Number(y.textContent);
                     } else if (n === 7) { // Win Rate Column
-                        xValue = Number(x.textContent.replace("%", "")); // Use textContent!
-                        yValue = Number(y.textContent.replace("%", "")); // Use textContent!
+                        xValue = Number(x.textContent.replace("%", ""));
+                        yValue = Number(y.textContent.replace("%", ""));
                     } else { // String Columns
-                        xValue = x.textContent.toLowerCase(); // Use textContent!
-                        yValue = y.textContent.toLowerCase();// Use textContent!
+                        xValue = x.textContent.toLowerCase();
+                        yValue = y.textContent.toLowerCase();
                     }
     
-                    if (isNaN(xValue)) xValue = -Infinity; //Handle cases where xValue is NaN
-                    if (isNaN(yValue)) yValue = -Infinity; //Handle cases where yValue is NaN
+                    //Handle NaN values for robust sorting
+                    if (isNaN(xValue)) xValue = -Infinity;
+                    if (isNaN(yValue)) yValue = -Infinity;
     
-                    if (dir == "asc") {
+                    if (dir === "asc") {
                         if (xValue > yValue) {
                             shouldSwitch = true;
                             break;
                         }
-                    } else if (dir == "desc") {
+                    } else if (dir === "desc") {
                         if (xValue < yValue) {
                             shouldSwitch = true;
                             break;
@@ -155,7 +156,7 @@
                     switching = true;
                     switchcount++;
                 } else {
-                    if (switchcount == 0 && dir == "asc") {
+                    if (switchcount === 0 && dir === "asc") {
                         dir = "desc";
                         switching = true;
                     }
