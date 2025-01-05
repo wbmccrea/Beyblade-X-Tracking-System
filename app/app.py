@@ -1175,8 +1175,7 @@ def combination_leaderboard():
                     {'AND m2.tournament_id = %s' if tournament_id else ''}
                     GROUP BY p.player_id
                     ORDER BY COUNT(*) DESC
-                    LIMIT 1
-                   ) AS most_used_by
+                    LIMIT 1) AS most_used_by
             FROM BeybladeCombinations bc
             JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
             {where_clause}
@@ -1187,9 +1186,8 @@ def combination_leaderboard():
 
         main_query_params = []
         if tournament_id:
-            main_query_params.append(tournament_id)
-        if tournament_id:
-            main_query_params.append(tournament_id)
+            main_query_params.extend([tournament_id])
+
         main_query_params.append(num_combinations)
 
         cursor.execute(main_query, tuple(main_query_params))
@@ -1211,6 +1209,7 @@ def combination_leaderboard():
                 "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
             })
             rank += 1
+
         try:
             cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
             tournaments = cursor.fetchall()
@@ -1221,7 +1220,6 @@ def combination_leaderboard():
 
         return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, columns_to_show=columns_to_show, tournament_id=tournament_id, tournaments=tournaments)
 
-
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
         return f"Database error: {e}", 500
@@ -1231,5 +1229,3 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-    
