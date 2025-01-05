@@ -1142,14 +1142,7 @@ def combination_leaderboard():
         tournament_id = request.args.get('tournament_id')
         columns_to_show = request.args.getlist('columns')
 
-        where_clause = ""
-        query_params = []
-
-        if tournament_id:
-            where_clause = "AND m.tournament_id = %s"
-            query_params.append(tournament_id)
-
-        main_query = """
+        base_query = """
             SELECT bc.combination_id, bc.combination_name,
                    COUNT(*) AS usage_count,
                    SUM(CASE WHEN m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id THEN 1
@@ -1184,18 +1177,19 @@ def combination_leaderboard():
             LIMIT %s
         """
 
-        main_query_params = []
-        tournament_condition = ""
+        query_params = []
+        subquery_condition = ""
+        main_query_condition = ""
+
         if tournament_id:
-            tournament_condition = "AND m2.tournament_id = %s"
-            where_clause = "AND m.tournament_id = %s"
-            main_query_params.append(tournament_id)
+            subquery_condition = "AND m2.tournament_id = %s"
+            main_query_condition = "AND m.tournament_id = %s"
+            query_params.append(tournament_id)
 
-        main_query_params.append(num_combinations)
+        query_params.append(num_combinations)
 
-        formatted_query = main_query % (tournament_condition, where_clause, "%s")
-        cursor.execute(formatted_query, tuple(main_query_params))
-
+        query = base_query % (subquery_condition, main_query_condition, "%s")
+        cursor.execute(query, tuple(query_params))
 
         combination_results = cursor.fetchall()
 
@@ -1215,7 +1209,6 @@ def combination_leaderboard():
                 "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
             })
             rank += 1
-
         try:
             cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
             tournaments = cursor.fetchall()
@@ -1236,4 +1229,3 @@ def combination_leaderboard():
 if __name__ == '__main__':
     app.run(debug=True)
 
-    
