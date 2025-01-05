@@ -1141,6 +1141,8 @@ def combination_leaderboard():
 
         tournament_id = request.args.get('tournament_id')
         columns_to_show = request.args.getlist('columns')
+        if not columns_to_show:
+            columns_to_show = ["rank", "name", "usage_count", "wins", "losses", "draws", "points", "win_rate", "most_used_by"]
 
         query = """
             SELECT bc.combination_id, bc.combination_name,
@@ -1194,24 +1196,29 @@ def combination_leaderboard():
         cursor.execute(query, tuple(query_params))
 
         combination_results = cursor.fetchall()
-        
+
         leaderboard_data = []
         rank = 1
         for row in combination_results:
             row['rank'] = rank
             row['win_rate'] = (row.get('wins',0) / (row.get('wins',0) + row.get('losses',0)) * 100) if (row.get('wins',0) + row.get('losses',0)) > 0 else 0
             leaderboard_data.append(row)
-            rank+=1
+            rank += 1
 
         try:
             cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
             tournaments = cursor.fetchall()
-            tournaments = [dict(zip([column[0] for column in cursor.description], row)) for row in tournaments]
+            tournaments = [dict(row) for row in tournaments]
         except mysql.connector.Error as e:
             logger.error(f"Error fetching tournaments: {e}")
             tournaments = []
 
-        return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, tournament_id=tournament_id, tournaments=tournaments, columns_to_show=columns_to_show)
+        return render_template('combination_leaderboard.html', 
+                               leaderboard_data=leaderboard_data, 
+                               num_combinations=num_combinations, 
+                               tournament_id=tournament_id, 
+                               tournaments=tournaments,
+                               columns_to_show=columns_to_show)
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
@@ -1222,4 +1229,3 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
