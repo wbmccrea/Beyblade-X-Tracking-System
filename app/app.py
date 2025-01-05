@@ -1159,6 +1159,15 @@ def combination_leaderboard():
                             WHEN m.winner_id != m.player2_id AND m.player2_combination_id = bc.combination_id AND m.draw = FALSE AND m.winner_id IS NOT NULL THEN 1
                             ELSE 0 END) AS losses,
                    SUM(CASE WHEN (m.player1_combination_id = bc.combination_id OR m.player2_combination_id = bc.combination_id) AND m.draw = TRUE THEN 1 ELSE 0 END) as draws,
+                    SUM(CASE
+                        WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND m.finish_type = 'Survivor' THEN 1
+                        WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Survivor' THEN 1
+                        WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
+                        WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
+                        WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
+                        WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
+                        ELSE 0
+                    END) AS points,
                    (SELECT p.player_name 
                     FROM Players p 
                     JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id) 
@@ -1186,7 +1195,7 @@ def combination_leaderboard():
         leaderboard_data = []
         rank = 1
 
-        for combination_id, combination_name, usage_count, wins, losses, draws, most_used_by in combination_results:
+        for combination_id, combination_name, usage_count, wins, losses, draws, points, most_used_by in combination_results:
             leaderboard_data.append({
                 "rank": rank,
                 "name": combination_name,
@@ -1194,6 +1203,7 @@ def combination_leaderboard():
                 "wins": wins,
                 "losses": losses,
                 "draws": draws,
+                "points": points,
                 "most_used_by": most_used_by or "N/A",
                 "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
             })
