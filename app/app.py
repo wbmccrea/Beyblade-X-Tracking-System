@@ -1168,13 +1168,22 @@ def combination_leaderboard():
                         WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
                         ELSE 0
                     END) AS points,
-                   (SELECT p.player_name 
-                    FROM Players p 
-                    JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id) 
-                    WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id) {'AND m2.tournament_id = %s' if tournament_id else ''}
-                    GROUP BY p.player_id 
-                    ORDER BY COUNT(*) DESC 
-                    LIMIT 1) AS most_used_by
+                   (SELECT p.player_name
+                    FROM Players p
+                    INNER JOIN (
+                        SELECT m2.player1_id AS player_id, m2.tournament_id
+                        FROM Matches m2
+                        WHERE m2.player1_combination_id = bc.combination_id
+                        UNION ALL
+                        SELECT m2.player2_id, m2.tournament_id
+                        FROM Matches m2
+                        WHERE m2.player2_combination_id = bc.combination_id
+                    ) AS player_matches ON p.player_id = player_matches.player_id
+                    {'WHERE player_matches.tournament_id = %s' if tournament_id else ''}
+                    GROUP BY p.player_id
+                    ORDER BY COUNT(*) DESC
+                    LIMIT 1
+                   ) AS most_used_by
             FROM BeybladeCombinations bc
             JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
             {where_clause}
@@ -1183,11 +1192,10 @@ def combination_leaderboard():
             LIMIT %s
         """
 
-        # Correct parameter handling for the main query
         main_query_params = []
         if tournament_id:
-            main_query_params.append(tournament_id) #Parameter for main query WHERE clause
-        if tournament_id: #Parameter for subquery WHERE clause
+            main_query_params.append(tournament_id)
+        if tournament_id:
             main_query_params.append(tournament_id)
         main_query_params.append(num_combinations)
 
@@ -1206,7 +1214,7 @@ def combination_leaderboard():
                 "losses": losses,
                 "draws": draws,
                 "points": points,
-                "most_used_by": most_used_by or "N/A",
+                "most_used_by": most_used_by or "N/A",  # Handle NULLs
                 "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
             })
             rank += 1
@@ -1218,7 +1226,7 @@ def combination_leaderboard():
         except mysql.connector.Error as e:
             logger.error(f"Error fetching tournaments: {e}")
             tournaments = []
-
+            
         return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, columns_to_show=columns_to_show, tournament_id=tournament_id, tournaments=tournaments)
 
     except mysql.connector.Error as e:
@@ -1227,4 +1235,7 @@ def combination_leaderboard():
     finally:
         if conn:
             conn.close()
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
