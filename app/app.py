@@ -1265,34 +1265,30 @@ def calculate_combination_type_stats(matches):
         type_usage[p1_type] += 1
         type_usage[p2_type] += 1
 
-        if draw:
+        if draw or winner is None:
             continue
 
-        matchup_key = tuple(sorted((p1_type, p2_type))) #ensures order does not matter
+        matchup_key = tuple(sorted((p1_type, p2_type)))
         type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
-        if winner == "Draw":
-            continue
-        elif winner is not None:
-            if winner in (p1_type, p2_type):
-                if winner == p1_type:
-                    type_matchups[matchup_key]["p1_wins"] += 1
-                else:
-                    type_matchups[matchup_key]["p2_wins"] += 1
+        if winner in (p1_type, p2_type):
+            if winner == p1_type:
+                type_matchups[matchup_key]["p1_wins"] += 1
             else:
-                continue
+                type_matchups[matchup_key]["p2_wins"] += 1
 
     most_common_type = type_usage.most_common(1)[0] if type_usage else None
 
-    matchup_win_rates = {}
-    for (type1, type2), stats in type_matchups.items():
+    # Correctly create and assign win_rates *outside* the main loop
+    for matchup_key, stats in type_matchups.items():
         total = stats["total"]
-        matchup_win_rates[(type1, type2)] = {
-            type1: (stats["p1_wins"] / total) * 100 if total > 0 else 0,
-            type2: (stats["p2_wins"] / total) * 100 if total > 0 else 0
+        type_matchups[matchup_key]["win_rates"] = {  # <--- This is the corrected line
+            matchup_key[0]: (stats["p1_wins"] / total) * 100 if total > 0 else 0,
+            matchup_key[1]: (stats["p2_wins"] / total) * 100 if total > 0 else 0
         }
+
     return {
         "most_common_type": most_common_type,
         "type_usage": type_usage,
-        "type_matchups": type_matchups,
-        "matchup_win_rates": matchup_win_rates
+        "type_matchups": type_matchups
     }
+
