@@ -1156,17 +1156,20 @@ def combination_leaderboard():
                         WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND m.finish_type = 'Survivor' THEN 1
                         WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Survivor' THEN 1
                         WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
-                        WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
+                        WHEN (m.winner_id = m.player2_id AND m.player1_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
                         WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
                         WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
                         ELSE 0
                     END) AS points,
                    (SELECT p.player_name
                     FROM Players p
-                    INNER JOIN Matches m2 ON p.player_id IN (m2.player1_id, m2.player2_id)
-                    WHERE (m2.player1_combination_id = bc.combination_id OR m2.player2_combination_id = bc.combination_id)
+                    INNER JOIN Matches m2 ON p.player_id = m2.player1_id AND m2.player1_combination_id = bc.combination_id
+                    UNION ALL
+                    SELECT p.player_name
+                    FROM Players p
+                    INNER JOIN Matches m2 ON p.player_id = m2.player2_id AND m2.player2_combination_id = bc.combination_id
                     %s
-                    GROUP BY p.player_id
+                    GROUP BY p.player_name
                     ORDER BY COUNT(*) DESC
                     LIMIT 1) AS most_used_by
             FROM BeybladeCombinations bc
@@ -1228,4 +1231,3 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
