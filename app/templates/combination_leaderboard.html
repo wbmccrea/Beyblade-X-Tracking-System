@@ -63,6 +63,7 @@
                 <input type="checkbox" name="columns" value="wins" {% if 'wins' in columns_to_show %}checked{% endif %}> Wins<br>
                 <input type="checkbox" name="columns" value="losses" {% if 'losses' in columns_to_show %}checked{% endif %}> Losses<br>
                 <input type="checkbox" name="columns" value="draws" {% if 'draws' in columns_to_show %}checked{% endif %}> Draws<br>
+                <input type="checkbox" name="columns" value="points" {% if 'points' in columns_to_show %}checked{% endif %}> Points<br>
                 <input type="checkbox" name="columns" value="win_rate" {% if 'win_rate' in columns_to_show %}checked{% endif %}> Win Rate<br>
                 <input type="checkbox" name="columns" value="most_used_by" {% if 'most_used_by' in columns_to_show %}checked{% endif %}> Most Used By<br>
                 <button type="submit">Update Leaderboard</button>
@@ -78,6 +79,7 @@
                         {% if 'wins' in columns_to_show %}<th>Wins</th>{% endif %}
                         {% if 'losses' in columns_to_show %}<th>Losses</th>{% endif %}
                         {% if 'draws' in columns_to_show %}<th>Draws</th>{% endif %}
+                        {% if 'points' in columns_to_show %}<th>Points</th>{% endif %}
                         {% if 'win_rate' in columns_to_show %}<th>Win Rate</th>{% endif %}
                         {% if 'most_used_by' in columns_to_show %}<th>Most Used By</th>{% endif %}
                     </tr>
@@ -91,6 +93,7 @@
                             {% if 'wins' in columns_to_show %}<td>{{ combination.wins }}</td>{% endif %}
                             {% if 'losses' in columns_to_show %}<td>{{ combination.losses }}</td>{% endif %}
                             {% if 'draws' in columns_to_show %}<td>{{ combination.draws }}</td>{% endif %}
+                            {% if 'points' in columns_to_show %}<td>{{ combination.points }}</td>{% endif %}
                             {% if 'win_rate' in columns_to_show %}<td>{{ combination.win_rate|round(2) }}%</td>{% endif %}
                             {% if 'most_used_by' in columns_to_show %}<td>{{ combination.most_used_by }}</td>{% endif %}
                         </tr>

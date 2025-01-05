@@ -1186,6 +1186,8 @@ def combination_leaderboard():
         # Correct parameter handling for the main query
         main_query_params = []
         if tournament_id:
+            main_query_params.append(tournament_id) #Parameter for main query WHERE clause
+        if tournament_id: #Parameter for subquery WHERE clause
             main_query_params.append(tournament_id)
         main_query_params.append(num_combinations)
 
