@@ -125,15 +125,18 @@
                     let xValue, yValue;
     
                     if (n === 0 || n === 2 || n === 3 || n === 4 || n === 5 || n === 6) { // Numeric Columns (excluding Win Rate)
-                        xValue = Number(x.innerHTML);
-                        yValue = Number(y.innerHTML);
-                    } else if (n === 7) { // Win Rate Column (handle the %)
-                        xValue = Number(x.innerHTML.replace("%", ""));
-                        yValue = Number(y.innerHTML.replace("%", ""));
+                        xValue = Number(x.textContent); // Use textContent!
+                        yValue = Number(y.textContent); // Use textContent!
+                    } else if (n === 7) { // Win Rate Column
+                        xValue = Number(x.textContent.replace("%", "")); // Use textContent!
+                        yValue = Number(y.textContent.replace("%", "")); // Use textContent!
                     } else { // String Columns
-                        xValue = x.innerHTML.toLowerCase();
-                        yValue = y.innerHTML.toLowerCase();
+                        xValue = x.textContent.toLowerCase(); // Use textContent!
+                        yValue = y.textContent.toLowerCase();// Use textContent!
                     }
+    
+                    if (isNaN(xValue)) xValue = -Infinity; //Handle cases where xValue is NaN
+                    if (isNaN(yValue)) yValue = -Infinity; //Handle cases where yValue is NaN
     
                     if (dir == "asc") {
                         if (xValue > yValue) {
