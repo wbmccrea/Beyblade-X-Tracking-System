@@ -1270,10 +1270,24 @@ def calculate_combination_type_stats(matches_data):
         matchup_key = tuple(sorted((p1_type, p2_type)))
         type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
 
-        if winner_name == p1_type:
-            type_matchups[matchup_key]["p1_wins"] += 1
-        elif winner_name == p2_type:
-            type_matchups[matchup_key]["p2_wins"] += 1
+        # Correctly determine the winner based on player names
+        if winner_name in (p1_type, p2_type): #Check if winner is a type
+            if winner_name == p1_type:
+                type_matchups[matchup_key]["p1_wins"] += 1
+            elif winner_name == p2_type:
+                type_matchups[matchup_key]["p2_wins"] += 1
+        else: #if winner is not a type, we need to find the combination they used and therefore the type
+            for p1_type_check, p2_type_check, winner_check, draw_check in matches_data:
+                if winner_check == winner_name and not draw_check:
+                    if winner_check == p1_type_check:
+                        winner_type = p1_type_check
+                    else:
+                        winner_type = p2_type_check
+                    if winner_type == p1_type:
+                        type_matchups[matchup_key]["p1_wins"] += 1
+                    elif winner_type == p2_type:
+                        type_matchups[matchup_key]["p2_wins"] += 1
+                    break
 
     most_common_type = type_usage.most_common(1)[0] if type_usage else None
 
