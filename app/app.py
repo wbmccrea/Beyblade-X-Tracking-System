@@ -1140,6 +1140,7 @@ def combination_leaderboard():
             num_combinations = 5
 
         tournament_id = request.args.get('tournament_id')
+        columns_to_show = request.args.getlist('columns')
 
         query = """
             SELECT bc.combination_id, bc.combination_name,
@@ -1193,15 +1194,14 @@ def combination_leaderboard():
         cursor.execute(query, tuple(query_params))
 
         combination_results = cursor.fetchall()
-
+        
         leaderboard_data = []
         rank = 1
-
         for row in combination_results:
             row['rank'] = rank
-            row['win_rate'] = (row['wins'] / (row['wins'] + row['losses']) * 100) if (row['wins'] + row['losses']) > 0 else 0
+            row['win_rate'] = (row.get('wins',0) / (row.get('wins',0) + row.get('losses',0)) * 100) if (row.get('wins',0) + row.get('losses',0)) > 0 else 0
             leaderboard_data.append(row)
-            rank += 1
+            rank+=1
 
         try:
             cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
@@ -1211,7 +1211,7 @@ def combination_leaderboard():
             logger.error(f"Error fetching tournaments: {e}")
             tournaments = []
 
-        return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, tournament_id=tournament_id, tournaments=tournaments)
+        return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, tournament_id=tournament_id, tournaments=tournaments, columns_to_show=columns_to_show)
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
@@ -1222,5 +1222,4 @@ def combination_leaderboard():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
