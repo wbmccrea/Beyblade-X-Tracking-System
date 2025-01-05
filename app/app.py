@@ -353,6 +353,7 @@ def add_match():
     finish_selected = None
 
     try:
+        # Fetch data for dropdowns (same as before)
         try:
             cursor.execute("SELECT player_name FROM Players")
             players = [{"player_name": player[0]} for player in cursor.fetchall()]
@@ -377,7 +378,6 @@ def add_match():
         except mysql.connector.Error as e:
             logger.debug(f"Error retrieving tournaments: {e}")
 
-
         if request.method == 'POST':
             data = request.form
             decoded_data = {}
@@ -401,22 +401,18 @@ def add_match():
                     return "Invalid Tournament ID", 400
 
             winner_id = None
-            if decoded_data['finish_type'] != "Draw":
-                winner_id = get_id_by_name("Players", decoded_data['winner_name'], "player_id")
+            draw = False
 
+            if decoded_data['finish_type'] == "Draw":
+                draw = True
+            else:
+                winner_id = get_id_by_name("Players", decoded_data['winner_name'], "player_id")
             try:
-                if decoded_data['finish_type'] == "Draw":
-                    sql = """
-                        INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, finish_type, match_time)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """
-                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, decoded_data['finish_type'], datetime.now())
-                else:
-                    sql = """
-                        INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """
-                    val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now())
+                sql = """
+                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now(), draw)
 
                 cursor.execute(sql, val)
                 conn.commit()
@@ -434,15 +430,18 @@ def add_match():
 
             except mysql.connector.Error as e:
                 conn.rollback()
+                logger.error(f"Error adding match: {e}")
                 return f"Error adding match: {e}", 500
 
     except mysql.connector.Error as e:
+        logger.error(f"Database error: {e}")
         return f"Database error: {e}", 500
     finally:
         if conn:
             conn.close()
 
     return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected)
+
 
 @app.route('/')  # Route for the landing page
 def index():
