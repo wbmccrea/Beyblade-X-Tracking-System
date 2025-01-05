@@ -1186,9 +1186,10 @@ def combination_leaderboard():
 
         main_query_params = []
         if tournament_id:
-            main_query_params.extend([tournament_id])
+            main_query_params.extend([tournament_id]) #Main query where clause
+            main_query_params.extend([tournament_id]) #Subquery where clause
 
-        main_query_params.append(num_combinations)
+        main_query_params.append(num_combinations) #Limit clause
 
         cursor.execute(main_query, tuple(main_query_params))
         combination_results = cursor.fetchall()
