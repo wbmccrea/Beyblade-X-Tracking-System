@@ -1257,35 +1257,26 @@ def combinations_types_stats():
 
     return render_template('combinations_types.html', type_stats=type_stats)
 
-def calculate_combination_type_stats(matches):
+def calculate_combination_type_stats(matches_data):  # Renamed to avoid confusion
     type_usage = Counter()
     type_matchups = {}
 
-    for p1_type, p2_type, winner_name, draw in matches: #winner_name now used
+    for p1_type, p2_type, winner_name, draw in matches_data:
         type_usage[p1_type] += 1
         type_usage[p2_type] += 1
 
-        if draw or winner_name == 'Draw': #handle draws
+        if draw or winner_name == 'Draw' or winner_name is None:
             continue
 
         matchup_key = tuple(sorted((p1_type, p2_type)))
         type_matchups.setdefault(matchup_key, {"p1_wins": 0, "p2_wins": 0, "total": 0})["total"] += 1
 
-        # Determine which player won based on player names
-        #This is the most direct and accurate way to count wins for each type in a matchup.
+        # Correctly determine the winner based on player names
         if winner_name is not None:
-            #Get the combination used by the winner
-            for p1_type_check, p2_type_check, winner_check, draw_check in matches:
-                if winner_check == winner_name and not draw_check:
-                    if winner_check == p1_type_check:
-                        winner_type = p1_type_check
-                    else:
-                        winner_type = p2_type_check
-                    if winner_type == p1_type:
-                        type_matchups[matchup_key]["p1_wins"] += 1
-                    elif winner_type == p2_type:
-                        type_matchups[matchup_key]["p2_wins"] += 1
-                    break
+            if winner_name == p1_type:
+                type_matchups[matchup_key]["p1_wins"] += 1
+            elif winner_name == p2_type:
+                type_matchups[matchup_key]["p2_wins"] += 1
 
     most_common_type = type_usage.most_common(1)[0] if type_usage else None
 
@@ -1301,3 +1292,5 @@ def calculate_combination_type_stats(matches):
         "type_usage": type_usage,
         "type_matchups": type_matchups
     }
+
+
