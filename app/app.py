@@ -1132,7 +1132,7 @@ def combination_leaderboard():
     conn = get_db_connection()
     if conn is None:
         return "Database connection error", 500
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True) # Use dictionary cursor
 
     try:
         num_combinations = int(request.args.get('num_combinations', 5))
@@ -1140,7 +1140,6 @@ def combination_leaderboard():
             num_combinations = 5
 
         tournament_id = request.args.get('tournament_id')
-        columns_to_show = request.args.getlist('columns')
 
         base_query = """
             SELECT bc.combination_id, bc.combination_name,
@@ -1156,21 +1155,25 @@ def combination_leaderboard():
                         WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND m.finish_type = 'Survivor' THEN 1
                         WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Survivor' THEN 1
                         WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
-                        WHEN (m.winner_id = m.player2_id AND m.player1_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
+                        WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND (m.finish_type = 'Burst' OR m.finish_type = 'KO') THEN 2
                         WHEN (m.winner_id = m.player1_id AND m.player1_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
                         WHEN (m.winner_id = m.player2_id AND m.player2_combination_id = bc.combination_id) AND m.finish_type = 'Extreme' THEN 3
                         ELSE 0
                     END) AS points,
-                   (SELECT p.player_name
-                    FROM Players p
-                    INNER JOIN Matches m2 ON p.player_id = m2.player1_id AND m2.player1_combination_id = bc.combination_id
-                    UNION ALL
-                    SELECT p.player_name
-                    FROM Players p
-                    INNER JOIN Matches m2 ON p.player_id = m2.player2_id AND m2.player2_combination_id = bc.combination_id
-                    %s
-                    GROUP BY p.player_name
-                    ORDER BY COUNT(*) DESC
+                   (SELECT player_name FROM (
+                        SELECT p.player_name, COUNT(*) AS player_count
+                        FROM Players p
+                        INNER JOIN Matches m2 ON p.player_id = m2.player1_id AND m2.player1_combination_id = bc.combination_id
+                        %s
+                        GROUP BY p.player_name
+                        UNION ALL
+                        SELECT p.player_name, COUNT(*)
+                        FROM Players p
+                        INNER JOIN Matches m2 ON p.player_id = m2.player2_id AND m2.player2_combination_id = bc.combination_id
+                        %s
+                        GROUP BY p.player_name
+                    ) AS player_counts
+                    ORDER BY player_count DESC
                     LIMIT 1) AS most_used_by
             FROM BeybladeCombinations bc
             JOIN Matches m ON bc.combination_id IN (m.player1_combination_id, m.player2_combination_id)
@@ -1187,11 +1190,11 @@ def combination_leaderboard():
         if tournament_id:
             subquery_condition = "AND m2.tournament_id = %s"
             main_query_condition = "AND m.tournament_id = %s"
-            query_params.extend([tournament_id, tournament_id])
+            query_params.extend([tournament_id, tournament_id, tournament_id])
 
         query_params.append(num_combinations)
 
-        query = base_query % (subquery_condition, main_query_condition, "%s")
+        query = base_query % (subquery_condition, subquery_condition, main_query_condition, "%s")
         cursor.execute(query, tuple(query_params))
 
         combination_results = cursor.fetchall()
@@ -1199,19 +1202,12 @@ def combination_leaderboard():
         leaderboard_data = []
         rank = 1
 
-        for combination_id, combination_name, usage_count, wins, losses, draws, points, most_used_by in combination_results:
-            leaderboard_data.append({
-                "rank": rank,
-                "name": combination_name,
-                "usage_count": usage_count,
-                "wins": wins,
-                "losses": losses,
-                "draws": draws,
-                "points": points,
-                "most_used_by": most_used_by or "N/A",
-                "win_rate": (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
-            })
+        for row in combination_results:
+            row['rank'] = rank
+            row['win_rate'] = (row['wins'] / (row['wins'] + row['losses']) * 100) if (row['wins'] + row['losses']) > 0 else 0
+            leaderboard_data.append(row)
             rank += 1
+
         try:
             cursor.execute("SELECT tournament_id, tournament_name FROM Tournaments")
             tournaments = cursor.fetchall()
@@ -1220,7 +1216,7 @@ def combination_leaderboard():
             logger.error(f"Error fetching tournaments: {e}")
             tournaments = []
 
-        return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, columns_to_show=columns_to_show, tournament_id=tournament_id, tournaments=tournaments)
+        return render_template('combination_leaderboard.html', leaderboard_data=leaderboard_data, num_combinations=num_combinations, tournament_id=tournament_id, tournaments=tournaments)
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
