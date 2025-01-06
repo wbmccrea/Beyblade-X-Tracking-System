@@ -1313,7 +1313,7 @@ def beyblade_stats():
 
     try:
         with conn.cursor() as cursor:
-            # Total Matches (Corrected Query)
+            # Total Matches
             cursor.execute("SELECT COUNT(*) FROM Matches WHERE draw = 0")
             total_matches = cursor.fetchone()[0]
 
@@ -1351,9 +1351,20 @@ def beyblade_stats():
             combination_stats = cursor.fetchall()
 
             stats = {
-                "total_matches": total_matches,
-                "top_players": [{"name": name, "points": points, "wins": wins, "losses": losses, "draws": draws} for name, points, wins, losses, draws in player_stats],
-                "top_combinations": [{"name": name, "points": points} for name, points in combination_stats]
+                "total_matches": int(total_matches), # Convert to int
+                "top_players": [
+                    {
+                        "name": name,
+                        "points": int(points), # Convert to int
+                        "wins": int(wins), # Convert to int
+                        "losses": int(losses), # Convert to int
+                        "draws": int(draws) # Convert to int
+                    }
+                    for name, points, wins, losses, draws in player_stats
+                ],
+                "top_combinations": [
+                    {"name": name, "points": int(points)} for name, points in combination_stats # Convert to int
+                ]
             }
             return jsonify(stats)
 
