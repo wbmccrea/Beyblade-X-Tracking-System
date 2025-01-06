@@ -1317,14 +1317,25 @@ def beyblade_stats():
             cursor.execute("SELECT COUNT(*) FROM Matches WHERE draw = 0")
             total_matches = cursor.fetchone()[0]
 
-            # Player Stats Query (Combined)
+            # Player Stats Query (Corrected)
             cursor.execute("""
                 SELECT 
                   p.player_name,
-                  SUM(CASE WHEN m.winner_id = p.player_id THEN 3 WHEN m.winner_id IS NULL THEN 1 ELSE 0 END) AS total_points,
+                  SUM(CASE 
+                        WHEN m.winner_id = p.player_id THEN
+                            CASE m.finish_type
+                                WHEN 'Survivor' THEN 1
+                                WHEN 'Burst' THEN 2
+                                WHEN 'KO' THEN 2
+                                WHEN 'Extreme' THEN 3
+                                ELSE 0  -- Should not happen, but good to have
+                            END
+                        WHEN m.draw = 1 THEN 0
+                        ELSE 0
+                    END) AS total_points,
                   SUM(CASE WHEN m.winner_id = p.player_id THEN 1 ELSE 0 END) AS wins,
                   SUM(CASE WHEN m.winner_id != p.player_id AND m.winner_id IS NOT NULL THEN 1 ELSE 0 END) AS losses,
-                  SUM(CASE WHEN m.winner_id IS NULL THEN 1 ELSE 0 END) AS draws
+                  SUM(CASE WHEN m.draw = 1 THEN 1 ELSE 0 END) AS draws
                 FROM Matches m
                 INNER JOIN Players p ON m.player1_id = p.player_id OR m.player2_id = p.player_id
                 GROUP BY p.player_name
@@ -1332,38 +1343,52 @@ def beyblade_stats():
                 LIMIT 3;
             """)
             player_stats = cursor.fetchall()
-            
+
+            # Combination Stats Query (Corrected)
             cursor.execute("""
                 SELECT 
-                  bc.combination_name,
-                  SUM(CASE WHEN m.player1_combination_id = bc.combination_id THEN
-                        CASE WHEN m.winner_id = m.player1_id THEN 3 WHEN m.winner_id IS NULL THEN 1 ELSE 0 END
-                        ELSE
-                        CASE WHEN m.winner_id = m.player2_id THEN 3 WHEN m.winner_id IS NULL THEN 1 ELSE 0 END
-                        END) AS total_points
+                    bc.combination_name,
+                    SUM(CASE 
+                        WHEN m.player1_combination_id = bc.combination_id AND m.winner_id = m.player1_id THEN
+                            CASE m.finish_type
+                                WHEN 'Survivor' THEN 1
+                                WHEN 'Burst' THEN 2
+                                WHEN 'KO' THEN 2
+                                WHEN 'Extreme' THEN 3
+                                ELSE 0
+                            END
+                        WHEN m.player2_combination_id = bc.combination_id AND m.winner_id = m.player2_id THEN
+                             CASE m.finish_type
+                                WHEN 'Survivor' THEN 1
+                                WHEN 'Burst' THEN 2
+                                WHEN 'KO' THEN 2
+                                WHEN 'Extreme' THEN 3
+                                ELSE 0
+                            END
+                        ELSE 0  -- For losses and draws
+                    END) AS total_points
                 FROM Matches m
                 INNER JOIN BeybladeCombinations bc ON m.player1_combination_id = bc.combination_id OR m.player2_combination_id = bc.combination_id
                 GROUP BY bc.combination_name
                 ORDER BY total_points DESC
                 LIMIT 3;
             """)
-
             combination_stats = cursor.fetchall()
 
             stats = {
-                "total_matches": int(total_matches), # Convert to int
+                "total_matches": int(total_matches),
                 "top_players": [
                     {
                         "name": name,
-                        "points": int(points), # Convert to int
-                        "wins": int(wins), # Convert to int
-                        "losses": int(losses), # Convert to int
-                        "draws": int(draws) # Convert to int
+                        "points": int(points),
+                        "wins": int(wins),
+                        "losses": int(losses),
+                        "draws": int(draws)
                     }
                     for name, points, wins, losses, draws in player_stats
                 ],
                 "top_combinations": [
-                    {"name": name, "points": int(points)} for name, points in combination_stats # Convert to int
+                    {"name": name, "points": int(points)} for name, points in combination_stats
                 ]
             }
             return jsonify(stats)
@@ -1373,4 +1398,3 @@ def beyblade_stats():
     finally:
         if conn:
             conn.close()
-
