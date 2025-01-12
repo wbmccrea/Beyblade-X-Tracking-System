@@ -1514,7 +1514,10 @@ def publish_stats_to_mqtt(client):
                 "state_topic": base_topic + "name",
             }
             client.publish(f"homeassistant/sensor/top_combination_{i+1}_name/config", json.dumps(discovery_config_name), retain=True)
-
+    client.loop_start()  # Start the network loop
+    client.publish("beyblade/stats", message_payload, qos=0)
+    client.loop_stop()  # Stop the loop after publishing (optional)
+    
     except mysql.connector.Error as e:
         logger.error(f"Database error in publish_stats_to_mqtt: {e}")
     finally:
