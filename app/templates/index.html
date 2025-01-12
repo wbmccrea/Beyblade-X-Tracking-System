@@ -3,57 +3,31 @@
 <head>
     <title>Beyblade X Database</title>
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        .navigation {
-            display: flex;
-            justify-content: center; /* Center the links */
-            gap: 20px; /* Space between links */
-            margin-bottom: 20px;
-        }
-
-        .navigation a {
-            padding: 10px 20px; /* Add padding to the links */
-            background-color: #4CAF50; /* Green */
-            border: none;
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            border-radius: 5px; /* Rounded corners */
-        }
-        .navigation a:hover {
-            background-color: #45a049; /* Darker green on hover */
-        }
+        /* ... (Your existing CSS styles) */
     </style>
 </head>
 <body>
     <h1>Welcome to the Beyblade X Database</h1>
 
     <div class="navigation">
-        <a href="/add_blade">Add Blade</a>
-        <a href="/add_ratchet">Add Ratchet</a>
-        <a href="/add_bit">Add Bit</a>
-        <a href="/add_combination">Add Combination</a>
-        <a href="/add_launcher">Add Launcher</a>
-        <a href="/add_player">Add Player</a>
-        <a href="/add_tournament">Add Tournament</a>
-        <a href="/add_match">Add Match</a>
+        <a href="{{ url_for('add_blade') }}">Add Blade</a>
+        <a href="{{ url_for('add_ratchet') }}">Add Ratchet</a>
+        <a href="{{ url_for('add_bit') }}">Add Bit</a>
+        <a href="{{ url_for('add_combination') }}">Add Combination</a>
+        <a href="{{ url_for('add_launcher') }}">Add Launcher</a>
+        <a href="{{ url_for('add_player') }}">Add Player</a>
+        <a href="{{ url_for('add_tournament') }}">Add Tournament</a>
+        <a href="{{ url_for('add_match') }}">Add Match</a>
+        <a href="{{ url_for('add_stadium') }}">Add Stadium</a> <!—Added Stadium Link-->
     </div>
     <div class="navigation">
-        <a href="/tournaments/stats">Tournament Stats</a>
-        <a href="/players/stats">Player Stats</a>
-        <a href="/combinations/stats">Combination Stats</a>
-        <a href="/leaderboard">Leaderboard</a>
-        <a href="/combination_leaderboard">Beyblade combination Leaderboard</a>
-        <a href="/combinations/types">Combination Types</a>
-        <a href="/beyblades/stats">Beyblade Stats</a>
+        <a href="{{ url_for('tournaments_stats') }}">Tournament Stats</a> <!—Updated Link-->
+        <a href="{{ url_for('players_stats') }}">Player Stats</a> <!—Updated Link-->
+        <a href="{{ url_for('combinations_stats') }}">Combination Stats</a> <!—Updated Link-->
+        <a href="{{ url_for('leaderboard') }}">Leaderboard</a>
+        <a href="{{ url_for('combination_leaderboard') }}">Beyblade combination Leaderboard</a>
+        <a href="{{ url_for('combinations_types') }}">Combination Types</a> <!—Updated Link-->
+        <a href="{{ url_for('beyblades_stats') }}">Beyblade Stats</a> <!—Updated Link-->
     </div>
 
     <p>Use the links above to manage and view Beyblade X data.</p>

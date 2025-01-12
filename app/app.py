@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 import mysql.connector
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect, url_for
 from datetime import datetime
 from urllib.parse import unquote
 import logging
@@ -1446,6 +1446,10 @@ def publish_stats_to_mqtt(client):
             player_wins = player[2]
             player_losses = player[3]
             player_draws = player[4]
+            for player, points in player_points.items():
+                # Ensure points is a Decimal object
+                if isinstance(points, decimal.Decimal):
+                    player_points[player] = str(points)  # Convert Decimal to string
 
             client.publish(base_topic + "name", player_name, retain=True)
             print(f"player_points data: {player_points}")  # Print the data for inspection
@@ -1625,3 +1629,51 @@ def beyblade_stats():
     finally:
         if conn:
             conn.close()
+
+from flask import Flask, render_template, request, redirect, url_for
+import mysql.connector
+from datetime import datetime
+from urllib.parse import unquote
+import logging
+
+# ... (other imports and app setup)
+
+@app.route('/add_stadium', methods=['GET', 'POST'])
+def add_stadium():
+    conn = get_db_connection()
+    if conn is None:
+        return "Database connection error", 500
+    cursor = conn.cursor()
+    message = None
+
+    if request.method == 'POST':
+        stadium_name = request.form['stadium_name']
+        description = request.form.get('description', None) # Use .get to handle optional fields
+        location = request.form.get('location', None)
+        dimensions = request.form.get('dimensions', None)
+        material = request.form.get('material', None)
+        notes = request.form.get('notes', None)
+
+        try:
+            sql = """
+                INSERT INTO Stadiums (stadium_name, description, location, dimensions, material, notes)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            val = (stadium_name, description, location, dimensions, material, notes)
+            cursor.execute(sql, val)
+            conn.commit()
+            message = "Stadium added successfully!"
+        except mysql.connector.Error as e:
+            conn.rollback()
+            logger.error(f"Error adding stadium: {e}")
+            message = f"Error adding stadium: {e}" # Display the error to the user for debugging
+            return f"Error adding stadium: {e}", 500
+        finally:
+            conn.close()
+        return redirect(url_for('add_stadium', message=message))
+    elif request.method == 'GET':
+        message = request.args.get('message')
+        if message:
+            return render_template('add_stadium.html', message=message)
+        else:
+            return render_template('add_stadium.html')
