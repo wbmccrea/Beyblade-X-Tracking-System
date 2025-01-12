@@ -388,7 +388,7 @@ def add_tournament():
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
 
-@app.route('/add_match', methods=['GET', 'POST'])
+@app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match") #added endpoint
 def add_match():
     conn = get_db_connection()
     if conn is None:
@@ -398,6 +398,7 @@ def add_match():
     combinations = []
     launchers = []
     tournaments = []
+    stadiums = [] #add stadiums
     message = None
     player1_selected = None
     player2_selected = None
@@ -408,20 +409,15 @@ def add_match():
     winner_selected = None
     tournament_selected = None
     finish_selected = None
+    stadium_selected = None #add stadium selected
 
     try:
-        # Fetch data for dropdowns (same as before)
+        # Fetch data for dropdowns
         try:
             cursor.execute("SELECT player_name FROM Players")
             players = [{"player_name": player[0]} for player in cursor.fetchall()]
         except mysql.connector.Error as e:
             logger.debug(f"Error retrieving players: {e}")
-
-        try:
-            cursor.execute("SELECT stadium_name FROM Stadiums")  # Modify query to match your table name
-            stadiums = [{"stadium_name": stadium[0]} for stadium in cursor.fetchall()]
-        except mysql.connector.Error as e:
-            logger.debug(f"Error retrieving stadiums: {e}")
 
         try:
             cursor.execute("SELECT combination_name FROM BeybladeCombinations")
@@ -441,6 +437,12 @@ def add_match():
         except mysql.connector.Error as e:
             logger.debug(f"Error retrieving tournaments: {e}")
 
+        try:
+            cursor.execute("SELECT stadium_name FROM Stadiums") #added stadium query
+            stadiums = [{"stadium_name": stadium[0]} for stadium in cursor.fetchall()]
+        except mysql.connector.Error as e:
+            logger.debug(f"Error retrieving stadiums: {e}")
+
         if request.method == 'POST':
             data = request.form
             decoded_data = {}
@@ -453,7 +455,8 @@ def add_match():
             p2_combo_id = get_id_by_name("BeybladeCombinations", decoded_data['player2_combination_name'], "combination_id")
             p1_launcher_id = get_id_by_name("LauncherTypes", decoded_data['player1_launcher_name'], "launcher_id")
             p2_launcher_id = get_id_by_name("LauncherTypes", decoded_data['player2_launcher_name'], "launcher_id")
-            stadium_name = decoded_data.get('stadium_name')
+            stadium_id = get_id_by_name("Stadiums", decoded_data["stadium_name"], "stadium_id") #added stadium id retrieval
+
             tournament_id = decoded_data.get('tournament_id')
             if tournament_id == "":
                 tournament_id = None
@@ -472,10 +475,10 @@ def add_match():
                 winner_id = get_id_by_name("Players", decoded_data['winner_name'], "player_id")
             try:
                 sql = """
-                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw, stadium_name)  # Add stadium_name to INSERT statement
+                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw, stadium_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now(), draw, stadium_name)  # Add stadium_name to value tuple
+                val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now(), draw, stadium_id) #added stadium id to insert
 
                 cursor.execute(sql, val)
                 conn.commit()
@@ -490,6 +493,7 @@ def add_match():
                 winner_selected = decoded_data.get('winner_name')
                 tournament_selected = int(decoded_data.get('tournament_id')) if decoded_data.get('tournament_id') else None
                 finish_selected = decoded_data.get('finish_type')
+                stadium_selected = decoded_data.get('stadium_name') #added stadium selected
 
             except mysql.connector.Error as e:
                 conn.rollback()
@@ -503,7 +507,7 @@ def add_match():
         if conn:
             conn.close()
 
-    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected)
+    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected, stadium_selected=stadium_selected) #added stadiums and stadium_selected
 
 
 @app.route('/')  # Route for the landing page
