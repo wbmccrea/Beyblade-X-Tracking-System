@@ -4,11 +4,11 @@
     <title>Add Match</title>
     <style>
         .container {
-            display: flex; /* Use flexbox for columns */
-            gap: 20px;     /* Add some space between columns */
+            display: flex;
+            gap: 20px;
         }
         .column {
-            flex: 1;      /* Make columns equal width */
+            flex: 1;
         }
     </style>
 </head>
@@ -74,13 +74,23 @@
                 </select><br><br>
             </div>
         </div>
-    <label for="tournament_id">Tournament:</label><br>
+
+        <label for="stadium_name">Stadium:</label><br> <!-—Added Stadium Select-->
+        <select id="stadium_name" name="stadium_name" required>
+            <option value="">Select Stadium</option>
+            {% for stadium in stadiums %}
+            <option value="{{ stadium['stadium_name'] }}" {% if stadium['stadium_name'] == stadium_selected %}selected{% endif %}>{{ stadium['stadium_name'] }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="tournament_id">Tournament:</label><br>
         <select id="tournament_id" name="tournament_id">
             <option value="">Select Tournament</option>
             {% for tournament in tournaments %}
                 <option value="{{ tournament['tournament_id'] }}" {% if tournament['tournament_id'] == tournament_selected %}selected{% endif %}>{{ tournament['tournament_name'] }}</option>
             {% endfor %}
         </select><br><br>
+
         <label for="winner_name">Winner (Leave blank for Draw):</label><br>
         <select id="winner_name" name="winner_name">
             <option value="">Select Winner</option>
@@ -100,5 +110,6 @@
 
         <input type="submit" value="Add Match">
     </form>
+        <a href="{{ url_for('index') }}">Back to Home</a>
 </body>
 </html>

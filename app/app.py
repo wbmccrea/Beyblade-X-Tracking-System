@@ -416,6 +416,12 @@ def add_match():
             logger.debug(f"Error retrieving players: {e}")
 
         try:
+            cursor.execute("SELECT stadium_name FROM Stadiums")  # Modify query to match your table name
+            stadiums = [{"stadium_name": stadium[0]} for stadium in cursor.fetchall()]
+        except mysql.connector.Error as e:
+            logger.debug(f"Error retrieving stadiums: {e}")
+
+        try:
             cursor.execute("SELECT combination_name FROM BeybladeCombinations")
             combinations = [{"combination_name": combo[0]} for combo in cursor.fetchall()]
         except mysql.connector.Error as e:
@@ -445,7 +451,7 @@ def add_match():
             p2_combo_id = get_id_by_name("BeybladeCombinations", decoded_data['player2_combination_name'], "combination_id")
             p1_launcher_id = get_id_by_name("LauncherTypes", decoded_data['player1_launcher_name'], "launcher_id")
             p2_launcher_id = get_id_by_name("LauncherTypes", decoded_data['player2_launcher_name'], "launcher_id")
-
+            stadium_name = decoded_data.get('stadium_name')
             tournament_id = decoded_data.get('tournament_id')
             if tournament_id == "":
                 tournament_id = None
@@ -464,10 +470,10 @@ def add_match():
                 winner_id = get_id_by_name("Players", decoded_data['winner_name'], "player_id")
             try:
                 sql = """
-                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw, stadium_name)  # Add stadium_name to INSERT statement
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now(), draw)
+                val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, decoded_data['finish_type'], datetime.now(), draw, stadium_name)  # Add stadium_name to value tuple
 
                 cursor.execute(sql, val)
                 conn.commit()
