@@ -1448,6 +1448,9 @@ def publish_stats_to_mqtt(client):
             player_draws = player[4]
 
             client.publish(base_topic + "name", player_name, retain=True)
+            print(f"player_points data: {player_points}")  # Print the data for inspection
+            player_points_json = json.dumps(player_points)
+            client.publish(base_topic + "points", player_points_json, retain=True)
             client.publish(base_topic + "points", player_points, retain=True)
             client.publish(base_topic + "wins", player_wins, retain=True)
             client.publish(base_topic + "losses", player_losses, retain=True)
