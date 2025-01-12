@@ -30,11 +30,15 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
-      DB_HOST: db
-      DB_USER: ${DB_USER:-beyblade_user}
-      DB_PASSWORD: ${DB_PASSWORD:-Sample_DB_Password}
-      DB_NAME: ${DB_NAME:-beyblade_db}
+#      DB_HOST: db
+#      DB_USER: ${DB_USER:-beyblade_user}
+#      DB_PASSWORD: ${DB_PASSWORD:-Sample_DB_Password}
+#      DB_NAME: ${DB_NAME:-beyblade_db}
+      FLASK_APP: app.py
+      FLASK_ENV: development
     volumes:
       - ./app:/app
       - ./app/static:/app/static

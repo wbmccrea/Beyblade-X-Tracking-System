@@ -7,6 +7,10 @@ from urllib.parse import unquote
 import logging
 from collections import Counter
 import operator
+import paho.mqtt.client as mqtt
+import json
+import time
+
 
 load_dotenv()
 
@@ -17,10 +21,18 @@ logger = logging.getLogger(__name__) #get a logger object
 
 app = Flask(__name__)
 
+#Database info
 DB_HOST = os.environ.get("DB_HOST")
 DB_NAME = os.environ.get("DB_NAME")
 DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
+
+# MQTT Configuration (from .env file)
+MQTT_BROKER = os.environ.get("MQTT_BROKER")
+MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
+MQTT_USER = os.environ.get("MQTT_USER")
+MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD")
+MQTT_TOPIC_PREFIX = "beyblade/stats/"
 
 def get_db_connection():
     try:
@@ -34,6 +46,49 @@ def get_db_connection():
     except mysql.connector.Error as e:
         logger.debug(f"Database connection error: {e}")
         return None
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logger.debug("Connected to MQTT Broker!")
+    else:
+        logger.error(f"Failed to connect to MQTT, return code {rc}")
+
+def connect_mqtt():
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            logger.info("Connected to MQTT Broker!")
+        else:
+            logger.error(f"Failed to connect to MQTT, return code {rc}")
+
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+    try:
+        client.connect(MQTT_BROKER, MQTT_PORT)
+        client.loop_start()
+        return client
+    except Exception as e:
+        logger.error(f"MQTT connection error: {e}")
+        return None
+
+client = connect_mqtt()
+
+if client is None:
+    retry_count = 0
+    max_retries = 5
+    delay = 5
+    while retry_count < max_retries:
+        retry_count += 1
+        logger.info(f"Retrying MQTT connection in {delay} seconds... (Attempt {retry_count}/{max_retries})")
+        time.sleep(delay)
+        client = connect_mqtt()
+        delay *= 2 # Exponential backoff
+        if client:
+            break
+    if client is None:
+        logger.critical("Failed to connect to MQTT after multiple retries. Exiting.")
+        exit(1)
+
 
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
@@ -1305,32 +1360,31 @@ def calculate_combination_type_stats(matches_data):
         "type_matchups": type_matchups
     }
 
-@app.route('/api/beyblade_stats', methods=['GET'])
-def beyblade_stats():
+def publish_stats_to_mqtt(client):
     conn = get_db_connection()
     if conn is None:
-        return jsonify({"error": "Database connection error"}), 500
+        logger.error("Could not connect to database to publish MQTT stats.")
+        return
 
     try:
         with conn.cursor() as cursor:
             # Total Matches
             cursor.execute("SELECT COUNT(*) FROM Matches WHERE draw = 0")
-            total_matches = cursor.fetchone()[0]
+            total_matches = int(cursor.fetchone()[0])
 
-            # Player Stats Query (Corrected)
+            # Player Stats Query
             cursor.execute("""
                 SELECT 
-                  p.player_name,
-                  SUM(CASE 
+                    p.player_name,
+                    SUM(CASE 
                         WHEN m.winner_id = p.player_id THEN
                             CASE m.finish_type
                                 WHEN 'Survivor' THEN 1
                                 WHEN 'Burst' THEN 2
                                 WHEN 'KO' THEN 2
                                 WHEN 'Extreme' THEN 3
-                                ELSE 0  -- Should not happen, but good to have
+                                ELSE 0
                             END
-                        WHEN m.draw = 1 THEN 0
                         ELSE 0
                     END) AS total_points,
                   SUM(CASE WHEN m.winner_id = p.player_id THEN 1 ELSE 0 END) AS wins,
@@ -1344,7 +1398,7 @@ def beyblade_stats():
             """)
             player_stats = cursor.fetchall()
 
-            # Combination Stats Query (Corrected)
+            # Combination Stats Query
             cursor.execute("""
                 SELECT 
                     bc.combination_name,
@@ -1375,25 +1429,192 @@ def beyblade_stats():
             """)
             combination_stats = cursor.fetchall()
 
-            stats = {
-                "total_matches": int(total_matches),
-                "top_players": [
-                    {
-                        "name": name,
-                        "points": int(points),
-                        "wins": int(wins),
-                        "losses": int(losses),
-                        "draws": int(draws)
-                    }
-                    for name, points, wins, losses, draws in player_stats
-                ],
-                "top_combinations": [
-                    {"name": name, "points": int(points)} for name, points in combination_stats
-                ]
+        # Publish to MQTT (Data and Discovery Messages)
+        client.publish(MQTT_TOPIC_PREFIX + "total_matches", total_matches, retain=True)
+        client.publish("homeassistant/sensor/beyblade_total_matches/config", json.dumps({
+            "name": "Beyblade Total Matches",
+            "state_topic": MQTT_TOPIC_PREFIX + "total_matches",
+            "unit_of_measurement": "Matches",
+            "state_class": "measurement",
+            "icon": "mdi:counter"
+        }), retain=True)
+
+        for i, player in enumerate(player_stats):
+            base_topic = MQTT_TOPIC_PREFIX + f"top_players/{i}/"
+            player_name = player[0]
+            player_points = player[1]
+            player_wins = player[2]
+            player_losses = player[3]
+            player_draws = player[4]
+
+            client.publish(base_topic + "name", player_name, retain=True)
+            client.publish(base_topic + "points", player_points, retain=True)
+            client.publish(base_topic + "wins", player_wins, retain=True)
+            client.publish(base_topic + "losses", player_losses, retain=True)
+            client.publish(base_topic + "draws", player_draws, retain=True)
+
+            discovery_config_name = {
+                "name": f"Top Player {i+1} Name",
+                "state_topic": base_topic + "name",
             }
-            return jsonify(stats)
+            client.publish(f"homeassistant/sensor/top_player_{i+1}_name/config", json.dumps(discovery_config_name), retain=True)
+
+            discovery_config_points = {
+                "name": f"Top Player {i+1} Points",
+                "state_topic": base_topic + "points",
+                "unit_of_measurement": "Points",
+                "state_class": "measurement",
+                "icon": "mdi:trophy"
+            }
+            client.publish(f"homeassistant/sensor/top_player_{i+1}_points/config", json.dumps(discovery_config_points), retain=True)
+            discovery_config_wins = {
+                "name": f"Top Player {i+1} Wins",
+                "state_topic": base_topic + "wins",
+                "unit_of_measurement": "Wins",
+                "state_class": "measurement",
+                "icon": "mdi:trophy-variant"
+            }
+            client.publish(f"homeassistant/sensor/top_player_{i+1}_wins/config", json.dumps(discovery_config_wins), retain=True)
+            discovery_config_losses = {
+                "name": f"Top Player {i+1} Losses",
+                "state_topic": base_topic + "losses",
+                "unit_of_measurement": "Losses",
+                "state_class": "measurement",
+                "icon": "mdi:trophy-variant"
+            }
+            client.publish(f"homeassistant/sensor/top_player_{i+1}_losses/config", json.dumps(discovery_config_losses), retain=True)
+            discovery_config_draws = {
+                "name": f"Top Player {i+1} Draws",
+                "state_topic": base_topic + "draws",
+                "unit_of_measurement": "Draws",
+                "state_class": "measurement",
+                "icon": "mdi:trophy-variant"
+            }
+            client.publish(f"homeassistant/sensor/top_player_{i+1}_draws/config", json.dumps(discovery_config_draws), retain=True)
+
+
+        for i, combination in enumerate(combination_stats):
+            base_topic = MQTT_TOPIC_PREFIX + f"top_combinations/{i}/"
+            combination_name = combination[0]
+            combination_points = combination[1]
+
+            client.publish(base_topic + "name", combination_name, retain=True)
+            client.publish(base_topic + "points", combination_points, retain=True)
+
+            discovery_config_points = {
+                "name": f"Top Combination {i+1} Points",
+                "state_topic": base_topic + "points",
+                "unit_of_measurement": "Points",
+                "state_class": "measurement",
+                "icon": "mdi:trophy"
+            }
+            client.publish(f"homeassistant/sensor/top_combination_{i+1}_points/config", json.dumps(discovery_config_points), retain=True)
+            discovery_config_name = {
+                "name": f"Top Combination {i+1} Name",
+                "state_topic": base_topic + "name",
+            }
+            client.publish(f"homeassistant/sensor/top_combination_{i+1}_name/config", json.dumps(discovery_config_name), retain=True)
 
     except mysql.connector.Error as e:
+        logger.error(f"Database error in publish_stats_to_mqtt: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/beyblade_stats', methods=['GET'])
+def beyblade_stats():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection error"}), 500
+
+    try:
+        with conn.cursor() as cursor:
+            # Total Matches
+            cursor.execute("SELECT COUNT(*) FROM Matches WHERE draw = 0")
+            total_matches = int(cursor.fetchone()[0])
+
+            # Player Stats Query
+            cursor.execute("""
+                SELECT 
+                    p.player_name,
+                    SUM(CASE 
+                        WHEN m.winner_id = p.player_id THEN
+                            CASE m.finish_type
+                                WHEN 'Survivor' THEN 1
+                                WHEN 'Burst' THEN 2
+                                WHEN 'KO' THEN 2
+                                WHEN 'Extreme' THEN 3
+                                ELSE 0
+                            END
+                        ELSE 0
+                    END) AS total_points,
+                  SUM(CASE WHEN m.winner_id = p.player_id THEN 1 ELSE 0 END) AS wins,
+                  SUM(CASE WHEN m.winner_id != p.player_id AND m.winner_id IS NOT NULL THEN 1 ELSE 0 END) AS losses,
+                  SUM(CASE WHEN m.draw = 1 THEN 1 ELSE 0 END) AS draws
+                FROM Matches m
+                INNER JOIN Players p ON m.player1_id = p.player_id OR m.player2_id = p.player_id
+                GROUP BY p.player_name
+                ORDER BY total_points DESC
+                LIMIT 3;
+            """)
+            player_stats = cursor.fetchall()
+
+            # Combination Stats Query
+            cursor.execute("""
+                SELECT 
+                    bc.combination_name,
+                    SUM(CASE 
+                        WHEN m.player1_combination_id = bc.combination_id AND m.winner_id = m.player1_id THEN
+                            CASE m.finish_type
+                                WHEN 'Survivor' THEN 1
+                                WHEN 'Burst' THEN 2
+                                WHEN 'KO' THEN 2
+                                WHEN 'Extreme' THEN 3
+                                ELSE 0
+                            END
+                        WHEN m.player2_combination_id = bc.combination_id AND m.winner_id = m.player2_id THEN
+                             CASE m.finish_type
+                                WHEN 'Survivor' THEN 1
+                                WHEN 'Burst' THEN 2
+                                WHEN 'KO' THEN 2
+                                WHEN 'Extreme' THEN 3
+                                ELSE 0
+                            END
+                        ELSE 0  -- For losses and draws
+                    END) AS total_points
+                FROM Matches m
+                INNER JOIN BeybladeCombinations bc ON m.player1_combination_id = bc.combination_id OR m.player2_combination_id = bc.combination_id
+                GROUP BY bc.combination_name
+                ORDER BY total_points DESC
+                LIMIT 3;
+            """)
+            combination_stats = cursor.fetchall()
+
+        stats = {
+            "total_matches": total_matches,
+            "top_players": [
+                {
+                    "name": name,
+                    "points": int(points),
+                    "wins": int(wins),
+                    "losses": int(losses),
+                    "draws": int(draws)
+                }
+                for name, points, wins, losses, draws in player_stats
+            ],
+            "top_combinations": [
+                {"name": name, "points": int(points)} for name, points in combination_stats
+            ]
+        }
+
+        # Publish to MQTT
+        publish_stats_to_mqtt(client)
+
+        # Return JSON response
+        return jsonify(stats)
+
+    except mysql.connector.Error as e:
+        logger.error(f"Database error in /api/beyblade_stats: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
