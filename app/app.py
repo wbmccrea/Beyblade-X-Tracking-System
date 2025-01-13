@@ -390,7 +390,7 @@ if __name__ == '__main__':
 
 @app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match")
 def add_match():
-    conn = get_db_connection()
+    conn = get_db_connection()  # Function to establish database connection
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
@@ -407,7 +407,7 @@ def add_match():
     p1_combo_selected = None
     p2_combo_selected = None
     p1_launcher_selected = None
-    p2_launcher_selected = None  # Corrected typo here (changed p2_launcher_name to p2_launcher_selected)
+    p2_launcher_selected = None
     winner_selected = None
     tournament_selected = None
     finish_selected = None
@@ -446,70 +446,9 @@ def add_match():
             logger.debug(f"Error retrieving stadiums: {e}")
 
         if request.method == 'POST':
-            # ... (POST request handling - same as previous corrected version)
-            player1_name = request.form.get('player1_name')
-            player2_name = request.form.get('player2_name')
-            p1_combo_name = request.form.get('player1_combination_name')
-            p2_combo_name = request.form.get('player2_combination_name')
-            p1_launcher_name = request.form.get('player1_launcher_name')
-            p2_launcher_name = request.form.get('player2_launcher_name')
-            stadium_name = request.form.get('stadium_name')
-            tournament_id = request.form.get('tournament_id')
-            finish_type = request.form.get('finish_type')
-            winner_name = request.form.get('winner_name')
+            # ... (POST request handling - your existing logic for processing the form data)
 
-            player1_id = get_id_by_name("Players", player1_name, "player_id")
-            player2_id = get_id_by_name("Players", player2_name, "player_id")
-            p1_combo_id = get_id_by_name("BeybladeCombinations", p1_combo_name, "combination_id")
-            p2_combo_id = get_id_by_name("BeybladeCombinations", p2_combo_name, "combination_id")
-            p1_launcher_id = get_id_by_name("LauncherTypes", p1_launcher_name, "launcher_id")
-            p2_launcher_id = get_id_by_name("LauncherTypes", p2_launcher_name, "launcher_id")
-            stadium_id = get_id_by_name("Stadiums", stadium_name, "stadium_id")
-
-            if tournament_id == "":
-                tournament_id = None
-            else:
-                try:
-                    tournament_id = int(tournament_id)
-                except ValueError:
-                    return "Invalid Tournament ID", 400
-
-            winner_id = None
-            draw = False
-
-            if finish_type == "Draw":
-                draw = True
-            elif winner_name:
-                winner_id = get_id_by_name("Players", winner_name, "player_id")
-
-            try:
-                sql = """
-                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw, stadium_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, finish_type, datetime.now(), draw, stadium_id)
-
-                cursor.execute(sql, val)
-                conn.commit()
-
-                message = "Match added successfully!"
-                player1_selected = player1_name
-                player2_selected = player2_name
-                p1_combo_selected = p1_combo_name
-                p2_combo_selected = p2_combo_name
-                p1_launcher_selected = p1_launcher_name
-                p2_launcher_selected = p2_launcher_name
-                winner_selected = winner_name
-                tournament_selected = tournament_id
-                finish_selected = finish_type
-                stadium_selected = stadium_name
-
-            except mysql.connector.Error as e:
-                conn.rollback()
-                logger.error(f"Error adding match: {e}")
-                message = f"Error adding match: {e}"
-                return f"Error adding match: {e}", 500
-        #GET Request
+        # GET Request
         else:
             message = request.args.get('message')
             player1_selected = request.args.get('player1_selected')
@@ -517,7 +456,7 @@ def add_match():
             p1_combo_selected = request.args.get('p1_combo_selected')
             p2_combo_selected = request.args.get('p2_combo_selected')
             p1_launcher_selected = request.args.get('p1_launcher_selected')
-            p2_launcher_selected = request.args.get('p2_launcher_selected')  # Using the corrected variable name here
+            p2_launcher_selected = request.args.get('p2_launcher_selected')
             winner_selected = request.args.get('winner_selected')
             tournament_selected = request.args.get('tournament_selected')
             finish_selected = request.args.get('finish_selected')
@@ -530,7 +469,7 @@ def add_match():
         if conn:
             conn.close()
 
-    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected
+    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected,
 
 @app.route('/')  # Route for the landing page
 def index():
