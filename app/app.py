@@ -154,6 +154,11 @@ if client:
 else:
     logger.error("Failed to establish initial MQTT connection")
 
+def publish_stats_at_startup():
+    logger.info("Publishing stats at startup")
+    if client:  # Check if MQTT client is connected
+        publish_stats()
+
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
     if conn is None:
@@ -1754,6 +1759,7 @@ def add_stadium():
         else:
             return render_template('add_stadium.html')
 
+publish_stats_at_startup()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
