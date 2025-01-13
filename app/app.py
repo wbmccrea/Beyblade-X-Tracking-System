@@ -283,26 +283,23 @@ def publish_mqtt_message(client, stat_type, json_data):
     else:
         logger.error(f"Publish failed for {stat_type}: {ret}")
 
-def publish_discovery_config(client):
+def publish_discovery_config(client, player_stats, combination_stats):
     """Publishes MQTT discovery messages for Home Assistant."""
 
-    for stat_type in ["player_stats", "combination_stats"]:
-        if stat_type == "player_stats":
-            data = json.loads(player_stats_json)
-        elif stat_type == "combination_stats":
-            data = json.loads(combination_stats_json)
+    for stat_type, data in [("player_stats", player_stats), ("combination_stats", combination_stats)]:
         for item in data:
             name = item["name"]
             for stat_name, value in item.items():
                 if stat_name == "name":
                     continue
+
                 config = {
                     "name": f"{name} {stat_name.replace('_', ' ').title()}",
                     "state_topic": f"{MQTT_TOPIC_PREFIX}{stat_type}",
-                    "value_template": f"{{{{ value_json.{data.index(item)}.{stat_name} }}}}",
+                    "value_template": f"{{{{ value_json[{data.index(item)}].{stat_name} }}}}", # Corrected value_template
                     "unit_of_measurement": "%" if stat_name in ["win_rate", "non_loss_rate"] else None,
                     "json_attributes_topic": f"{MQTT_TOPIC_PREFIX}{stat_type}",
-                    "unique_id": f"{stat_type}_{name}_{stat_name}", #Unique ID for Home Assistant
+                    "unique_id": f"{stat_type}_{name}_{stat_name}",
                 }
 
                 discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/sensor/{MQTT_TOPIC_PREFIX.replace('/', '_')}{stat_type.replace('/', '_')}/{name}_{stat_name}/config"
