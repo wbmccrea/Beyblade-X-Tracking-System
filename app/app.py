@@ -455,6 +455,14 @@ def add_match():
             p2_launcher_name = request.form.get('player2_launcher_name')
             stadium_name = request.form.get('stadium_name')
             tournament_id = request.form.get('tournament_id')
+            if tournament_id:  # Only convert if there's a value
+                try:
+                    tournament_id = int(tournament_id)
+                except ValueError:
+                    return "Invalid Tournament ID", 400
+            else:
+            tournament_id = None  # Set to None if no tournament is selected
+
             finish_type = request.form.get('finish_type')
             winner_name = request.form.get('winner_name')
 
