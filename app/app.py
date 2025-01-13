@@ -103,36 +103,43 @@ def publish_stats():
         cursor = conn.cursor()
 
         player_stats = []
-        cursor_player = conn.cursor() #New Cursor
-        try:
-            cursor_player.execute("SELECT player_id, player_name FROM Players")
-            players = cursor_player.fetchall()
-            for player_id, player_name in players:
-                cursor_player.execute("""
-                    SELECT
-                        COUNT(CASE WHEN winner_id = %s THEN 1 END) AS wins,
-                        COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND winner_id IS NOT NULL AND winner_id != %s THEN 1 END) AS losses,
-                        COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND draw = 1 THEN 1 END) AS draws,
-                        SUM(CASE
-                            WHEN winner_id = %s AND finish_type = 'Survivor' THEN 1
-                            WHEN winner_id = %s AND finish_type = 'KO' THEN 2
-                            WHEN winner_id = %s AND finish_type = 'Burst' THEN 2
-                            WHEN winner_id = %s AND finish_type = 'Extreme' THEN 3
-                            ELSE 0
-                        END) AS points
-                    FROM Matches
-                    WHERE player1_id = %s OR player2_id = %s;
-                """, (player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id))
-                result = cursor.fetchone()
-                wins, losses, draws, points = result or (0, 0, 0, 0)  # Handle potential None result
-                player_stats.append({
-                    "name": player_name,
-                    "wins": wins, "losses": losses, "draws": draws, "points": int(points),
-                    "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0, #Win Rate
-                    "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0, #Non-loss Rate
-                })
-        finally:
-            cursor_player.close() #Close the cursor when done
+        with conn.cursor() as cursor_player:
+            try:
+                cursor_player.execute("SELECT player_id, player_name FROM Players")
+                players = cursor_player.fetchall()
+                for player_id, player_name in players:
+                    sql = """
+                        SELECT
+                            COUNT(CASE WHEN winner_id = %s THEN 1 END) AS wins,
+                            COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND winner_id IS NOT NULL AND winner_id != %s THEN 1 END) AS losses,
+                            COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND draw = 1 THEN 1 END) AS draws,
+                            SUM(CASE
+                                WHEN winner_id = %s AND finish_type = 'Survivor' THEN 1
+                                WHEN winner_id = %s AND finish_type = 'KO' THEN 2
+                                WHEN winner_id = %s AND finish_type = 'Burst' THEN 2
+                                WHEN winner_id = %s AND finish_type = 'Extreme' THEN 3
+                                ELSE 0
+                            END) AS points
+                        FROM Matches
+                        WHERE player1_id = %s OR player2_id = %s;
+                    """
+                    parameters = (player_id,) * 11  # Create tuple with 11 player_ids
+                    print(f"Player Stats Number of parameters: {len(parameters)}")
+                    print(f"Player ID: {player_id}") #Print the player id
+                    print(f"Player Name: {player_name}") #Print the player name
+                    mogrified_sql = cursor_player.mogrify(sql, parameters)
+                    print(f"Player Stats Mogrified SQL: {mogrified_sql}")
+                    cursor_player.execute(sql, parameters)
+                    result = cursor_player.fetchone()
+                    wins, losses, draws, points = result or (0, 0, 0, 0)
+                    player_stats.append({
+                        "name": player_name,
+                        "wins": wins, "losses": losses, "draws": draws, "points": int(points),
+                        "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0,
+                        "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0,
+                    })
+            except Exception as e:
+                logger.error(f"Player stats error: {e}")
 
          # Recent Matches
         recent_matches = []
