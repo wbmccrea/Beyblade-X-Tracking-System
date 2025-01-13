@@ -158,7 +158,7 @@ def publish_stats():
             cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
             combinations = cursor_combination.fetchall()
             for combination_id, combination_name in combinations:
-                cursor_combination.execute("""
+                sql = """
                     SELECT
                         COUNT(DISTINCT m.match_id) AS matches_played,
                         COUNT(CASE WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
@@ -176,8 +176,12 @@ def publish_stats():
                     FROM BeybladeCombinations bc
                     LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
                     WHERE bc.combination_id = %s
-                """, (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id))
-                result = cursor_combination.fetchone()  # Corrected line
+                """
+                parameters = (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id)
+                mogrified_sql = cursor_combination.mogrify(sql, parameters)
+                logger.debug(f"Executing combination stats query: {mogrified_sql}")  # Log the FULL QUERY
+                cursor_combination.execute(sql, parameters)
+                result = cursor_combination.fetchone()
                 matches_played, wins, points = result or (0, 0, 0)
                 combination_stats.append({
                     "name": combination_name,
