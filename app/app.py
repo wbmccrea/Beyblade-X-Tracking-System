@@ -47,6 +47,8 @@ def get_db_connection():
         logger.debug(f"Database connection error: {e}")
         return None
 
+client = None  # Global client variable initialized to None
+
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
@@ -66,6 +68,7 @@ def connect_mqtt():
     try:
         client.connect(MQTT_BROKER, MQTT_PORT)
         client.loop_start()
+        print("Client connected:", client)  # Add this line
         return client
     except Exception as e:
         logger.error(f"MQTT connection error: {e}")
@@ -90,6 +93,7 @@ if client is None:
         exit(1)
 
 def publish_stats():
+    logger.info("publish_stats() called")
     try:
         conn = get_db_connection()
         if conn is None:
@@ -110,25 +114,53 @@ def publish_stats():
             cursor.execute("SELECT COUNT(*) FROM Matches WHERE (player1_id = %s OR player2_id = %s) AND draw = 1", (player_id, player_id))
             draws = cursor.fetchone()[0]
             player_stats.append({"name": player_name, "wins": wins, "losses": losses, "draws": draws})
-        recent_matches = [] #example
+        recent_matches = []
         cursor.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
-        recent_matches = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+        matches = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
 
-        # Format data as JSON
+        for match in matches:
+            match_dict = dict(zip(column_names, match))
+            # Convert datetime object to string
+            if "match_time" in match_dict and match_dict["match_time"] is not None:
+                match_dict["match_time"] = match_dict["match_time"].isoformat()
+            recent_matches.append(match_dict)
+
         player_stats_json = json.dumps(player_stats)
         recent_matches_json = json.dumps(recent_matches)
 
-        # Publish to MQTT
-        client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
-        client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
+        logger.info(f"Publishing player stats: {player_stats_json}")
+        logger.info(f"Publishing recent matches: {recent_matches_json}")
+
+        client = connect_mqtt() #create the client inside the function
+        if client and client.connected: #check if client exists before checking if it is connected
+            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'player_stats'}")
+            ret = client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
+            logger.info(f"Publish result for player stats: {ret}")  # Check return value
+
+            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'recent_matches'}")
+            ret = client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
+            logger.info(f"Publish result for recent matches: {ret}")  # Check return value
+        else:
+            logger.error("MQTT client not connected, attempting to reconnect")
+            global client
+            client = connect_mqtt() #attempt to re-establish the connection
+            if client and client.is_connected():
+                logger.info("Reconnected to MQTT Broker")
+                client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
+                client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
+            else:
+                logger.error("Failed to re-establish MQTT connection")
+
         conn.close()
-        logger.info("Stats published to MQTT")
+        logger.info("Stats published to MQTT (if successful)")
 
     except Exception as e:
         logger.error(f"Error publishing stats to MQTT: {e}")
 
 @app.before_request
 def on_startup():
+    logger.info("starting")
     publish_stats() #publish at startup
 
 def get_id_by_name(table, name, id_column):
@@ -139,7 +171,7 @@ def get_id_by_name(table, name, id_column):
     cursor = conn.cursor()
     try:
         name = name.strip()
-        logger.info(f"get_id_by_name: Looking for '{name}' in table '{table}'")
+        #logger.info(f"get_id_by_name: Looking for '{name}' in table '{table}'")
 
         if table == "Players":
             name_column = "player_name"
@@ -154,14 +186,14 @@ def get_id_by_name(table, name, id_column):
             return None
 
         query = f"SELECT {id_column} FROM {table} WHERE LOWER({name_column}) = LOWER(%s)" # Use name_column
-        logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
+        #logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
         cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
-            logger.info(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
+            #logger.info(f"get_id_by_name: Found {id_column}: {result[0]} for '{name}'")
             return result[0]
         else:
-            logger.info(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
+            #logger.info(f"get_id_by_name: No '{id_column}' found for '{name}' in table '{table}'")
             return None
     except mysql.connector.Error as e:
         logger.exception(f"get_id_by_name: Database error: {e}")
