@@ -193,6 +193,8 @@ def get_id_by_name(table, name, id_column):
             name_column = "launcher_name"
         elif table == "Stadiums":  # Add this case for Stadiums
             name_column = "stadium_name"  # Set name_column to "stadium_name"
+        elif table == "Tournaments":  # Add this elif condition
+            name_column = "tournament_name"
         else:
             logger.error(f"get_id_by_name: Invalid table name: {table}")
             return None
