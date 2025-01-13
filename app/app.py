@@ -131,7 +131,7 @@ def publish_stats():
                     "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0, #Win Rate
                     "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0, #Non-loss Rate
                 })
-        finally
+        finally:
             cursor_player.close() #Close the cursor when done
 
          # Recent Matches
@@ -148,7 +148,7 @@ def publish_stats():
                 if "match_time" in match_dict and match_dict["match_time"] is not None:
                     match_dict["match_time"] = match_dict["match_time"].isoformat()
                 recent_matches.append(match_dict)
-        finally
+        finally:
             cursor_matches.close() #Close the cursor when done
 
         # Combination Stats
