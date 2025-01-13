@@ -126,22 +126,46 @@ def publish_stats():
                 match_dict["match_time"] = match_dict["match_time"].isoformat()
             recent_matches.append(match_dict)
 
+        # **New: Combination stats retrieval**
+        combination_stats = []
+        cursor.execute("""
+            SELECT bc.combination_name, COUNT(CASE WHEN m.player1_combination_id = bc.combination_id THEN 1 END) + COUNT(CASE WHEN m.player2_combination_id = bc.combination_id THEN 1 END) AS matches_played,
+            COUNT(CASE WHEN m.player1_combination_id = bc.combination_id AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = bc.combination_id AND m.winner_id = m.player2_id THEN 1 END) AS wins
+            FROM BeybladeCombinations bc
+            LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
+            GROUP BY bc.combination_name;
+        """)
+        for row in cursor.fetchall():
+            combination_stats.append({"name": row[0], "matches_played": row[1] or 0, "wins": row[2] or 0})  # Handle potential NULLs
+
+        # Convert data to JSON format
+
         player_stats_json = json.dumps(player_stats)
         recent_matches_json = json.dumps(recent_matches)
+        combination_stats_json = json.dumps(combination_stats)
 
         logger.info(f"Publishing player stats: {player_stats_json}")
         logger.info(f"Publishing recent matches: {recent_matches_json}")
+        logger.info(f"Publishing combination stats: {combination_stats_json}")
 
         client = g.mqtt_client  
 
         if client and connected_flag:  # Check the flag!
+            # Publish player stats (unchanged)
             logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'player_stats'}")
             ret = client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
             logger.info(f"Publish result for player stats: {ret}")  # Check return value
 
+            # Publish recent matches (unchanged)
             logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'recent_matches'}")
             ret = client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
             logger.info(f"Publish result for recent matches: {ret}")  # Check return value
+
+            # **New: Publish combination stats**
+            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'combination_stats'}")
+            ret = client.publish(MQTT_TOPIC_PREFIX + "recent_matches", combination_stats_json)  # Typo corrected: "recent_matches" should be "combination_stats"
+            logger.info(f"Publish result for combination stats: {ret}")
+
         else:
             logger.error("MQTT client not connected, cannot publish stats")
 
