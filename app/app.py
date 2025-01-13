@@ -136,9 +136,9 @@ def publish_stats():
         logger.error(f"Error publishing stats to MQTT: {e}")
 
 @app.before_request
-def on_startup():
-    logger.info("starting")
-    publish_stats() #publish at startup
+def before_request():
+    g.mqtt_client = client
+
 
 @app.teardown_request
 def teardown_request(exception):
@@ -388,10 +388,6 @@ def add_launcher():
             return f"Error adding launcher: {e}", 400
     return render_template('add_launcher.html')
 
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
-
 @app.route('/add_player', methods=['GET', 'POST'])
 def add_player():
     if request.method == 'POST':
@@ -409,9 +405,6 @@ def add_player():
             conn.close()
             return f"Error adding player: {e}", 400
     return render_template('add_player.html')
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
 
 @app.route('/add_tournament', methods=['GET', 'POST'])
 def add_tournament():
@@ -448,9 +441,6 @@ def add_tournament():
             logger.debug(f"Database Error: {e}")  # Print the full error for debugging
             return f"Error adding tournament: {e}", 500  # Return user-friendly error message
     return render_template('add_tournament.html')
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
 
 @app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match")
 def add_match():
@@ -596,9 +586,6 @@ def add_match():
 @app.route('/')  # Route for the landing page
 def index():
     return render_template('index.html')
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
 
 @app.route('/tournaments/stats', methods=['GET'])
 def tournament_stats():
@@ -973,9 +960,6 @@ def calculate_player_stats(player):
         "favorite_win_type": favorite_win_type,
         "win_loss_streak": win_loss_streak
     }
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
 
 @app.route('/combinations/stats', methods=['GET'])
 def combinations_stats():
@@ -1376,9 +1360,6 @@ def combination_leaderboard():
         if conn:
             conn.close()
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
 @app.route('/combinations/types', methods=['GET'])
 def combinations_types_stats():
     conn = get_db_connection()
@@ -1772,3 +1753,7 @@ def add_stadium():
             return render_template('add_stadium.html', message=message)
         else:
             return render_template('add_stadium.html')
+
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
