@@ -13,6 +13,7 @@ import paho.mqtt.client as mqtt
 import json
 import time
 import threading
+from decimal import Decimal
 
 
 load_dotenv()
