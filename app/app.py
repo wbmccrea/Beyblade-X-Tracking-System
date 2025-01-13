@@ -53,6 +53,22 @@ def get_db_connection():
 client = None  # Global client variable initialized to None
 connected_flag = False
 
+def on_connect(client, userdata, flags, rc):  # Move to global scope
+    global connected_flag
+    if rc == 0:
+        logger.info("Connected to MQTT Broker!")
+        connected_flag = True
+    else:
+        logger.error(f"Failed to connect to MQTT, return code {rc}")
+
+def on_disconnect(client, userdata, rc):  # Move to global scope
+    global connected_flag
+    connected_flag = False
+    if rc != 0:
+        logger.error(f"Disconnected from MQTT Broker with code {rc}. Attempting to reconnect...")
+        time.sleep(5)  # Wait before retrying
+        connect_mqtt()
+        
 def connect_mqtt():
     global client # This is needed to modify the global client variable
     if client is None:  # Correct check: if client is None
