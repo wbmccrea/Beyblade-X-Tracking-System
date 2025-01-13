@@ -145,10 +145,10 @@ def publish_stats():
                         "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0,
                         "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0,
                     })
-        except mysql.connector.errors.ProgrammingError as e:
-            logger.error(f"Player Stats SQL Programming Error: {e}")
-        except Exception as e:
-            logger.error(f"Player stats error: {e}")
+            except mysql.connector.errors.ProgrammingError as e:
+                logger.error(f"Player Stats SQL Programming Error: {e}")
+            except Exception as e:
+                logger.error(f"Player stats error: {e}")
 
          # Recent Matches
         recent_matches = []
