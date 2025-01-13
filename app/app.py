@@ -68,7 +68,7 @@ def on_disconnect(client, userdata, rc):  # Move to global scope
         logger.error(f"Disconnected from MQTT Broker with code {rc}. Attempting to reconnect...")
         time.sleep(5)  # Wait before retrying
         connect_mqtt()
-        
+
 def connect_mqtt():
     global client # This is needed to modify the global client variable
     if client is None:  # Correct check: if client is None
@@ -198,7 +198,7 @@ def get_id_by_name(table, name, id_column):
             return None
 
         query = f"SELECT {id_column} FROM {table} WHERE LOWER({name_column}) = LOWER(%s)" # Use name_column
-        #logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
+        logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
         cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
