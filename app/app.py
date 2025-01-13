@@ -95,7 +95,7 @@ def publish_stats():
     global connected_flag
     logger.info("publish_stats() called")
     try:
-        conn = get_db_connection()
+        conn = get_db_connection() #Your function to get the db connection
         if conn is None:
             logger.error("Database connection error during stats publishing")
             return
@@ -139,7 +139,7 @@ def publish_stats():
 
                     if result:
                         wins, losses, draws, points = result
-                        points = int(points) if points is not None else 0
+                        points = int(points) if points is not None and isinstance(points, Decimal) else points if points is not None else 0
                     else:
                         wins, losses, draws, points = 0, 0, 0, 0
 
@@ -163,7 +163,6 @@ def publish_stats():
             except Exception as e:
                 logger.error(f"Player stats error: {e}")
 
-        # Recent Matches (Unchanged, but included for completeness)
         recent_matches = []
         with conn.cursor() as cursor_matches:
             try:
@@ -179,12 +178,76 @@ def publish_stats():
             except Exception as e:
                 logger.error(f"Recent matches error: {e}")
 
+        combination_stats = []
+        with conn.cursor() as cursor_combination:
+            try:
+                cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
+                combinations = cursor_combination.fetchall()
+                logger.info(f"Combinations retrieved: {combinations}")
+
+                for combination_id, combination_name in combinations:
+                    if not combination_id:
+                        logger.warning(f"Skipping combination with invalid ID: {combination_name}")
+                        continue
+
+                    sql = """
+                        SELECT
+                            COUNT(DISTINCT m.match_id) AS matches_played,
+                            COUNT(CASE WHEN m.player1_combination_id = %(combination_id)s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %(combination_id)s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
+                            SUM(CASE
+                                WHEN m.player1_combination_id = %(combination_id)s AND m.winner_id = m.player1_id AND m.finish_type = 'Survivor' THEN 1
+                                WHEN m.player1_combination_id = %(combination_id)s AND m.winner_id = m.player1_id AND m.finish_type = 'KO' THEN 2
+                                WHEN m.player1_combination_id = %(combination_id)s AND m.winner_id = m.player1_id AND m.finish_type = 'Burst' THEN 2
+                                WHEN m.player1_combination_id = %(combination_id)s AND m.winner_id = m.player1_id AND m.finish_type = 'Extreme' THEN 3
+                                WHEN m.player2_combination_id = %(combination_id)s AND m.winner_id = m.player2_id AND m.finish_type = 'Survivor' THEN 1
+                                WHEN m.player2_combination_id = %(combination_id)s AND m.winner_id = m.player2_id AND m.finish_type = 'KO' THEN 2
+                                WHEN m.player2_combination_id = %(combination_id)s AND m.winner_id = m.player2_id AND m.finish_type = 'Burst' THEN 2
+                                WHEN m.player2_combination_id = %(combination_id)s AND m.winner_id = m.player2_id AND m.finish_type = 'Extreme' THEN 3
+                                ELSE 0
+                            END) AS points
+                        FROM BeybladeCombinations bc
+                        LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
+                        WHERE bc.combination_id = %(combination_id)s
+                    """
+                    parameters = {'combination_id': combination_id}
+                    logger.info(f"Combination ID: {combination_id}")
+                    logger.info(f"Combination Name: {combination_name}")
+                    logger.info(f"SQL: {sql}")
+                    logger.info(f"Parameters: {parameters}")
+
+                    cursor_combination.execute(sql, parameters)
+                    result = cursor_combination.fetchone()
+                    logger.info(f"Result: {result}")
+
+                    if result:
+                        matches_played, wins, points = result
+                        points = int(points) if points is not None and isinstance(points, Decimal) else points if points is not None else 0
+                    else:
+                        matches_played, wins, points = 0, 0, 0
+
+                    win_rate = (wins / matches_played) * 100 if matches_played > 0 else 0
+                    non_loss_rate = ((wins + (matches_played - wins)) / matches_played) * 100 if matches_played > 0 else 0
+
+                    combination_stats.append({
+                        "name": combination_name,
+                        "matches_played": matches_played,
+                        "wins": wins,
+                        "points": points,
+                        "win_rate": win_rate,
+                        "non_loss_rate": non_loss_rate,
+                    })
+            except mysql.connector.errors.ProgrammingError as e:
+                logger.error(f"Combination Stats SQL Programming Error: {e}")
+            except Exception as e:
+                logger.error(f"Combination stats error: {e}")
+
         try:
-            player_stats_json = json.dumps(player_stats, default=str) #Added default=str
+            player_stats_json = json.dumps(player_stats, default=str)
             recent_matches_json = json.dumps(recent_matches, default=str)
+            combination_stats_json = json.dumps(combination_stats, default=str)
         except TypeError as e:
             logger.error(f"JSON Encoding Error: {e}")
-            return #Exit the function if JSON encoding fails to prevent further errors.
+            return
         except Exception as e:
             logger.error(f"Unexpected error during JSON encoding: {e}")
             return
@@ -205,6 +268,13 @@ def publish_stats():
                 logger.info("Publish successful for recent matches")
             else:
                 logger.error(f"Publish failed for recent matches: {ret}")
+
+            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'combination_stats'}")
+            ret = client.publish(MQTT_TOPIC_PREFIX + "combination_stats", combination_stats_json)
+            if ret[0] == 0:
+                logger.info("Publish successful for combination stats")
+            else:
+                logger.error(f"Publish failed for combination stats: {ret}")
         else:
             logger.error("MQTT client not connected, cannot publish stats")
 
@@ -212,7 +282,7 @@ def publish_stats():
         logger.info("Stats published to MQTT (if successful)")
 
     except Exception as e:
-        logger.error(f"Error publishing stats to MQTT: {e}")
+        logger.error(f"Error publishing stats to MQTT: {e}")                        
 
 @app.before_request
 def before_request():
