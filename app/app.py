@@ -1,3 +1,5 @@
+global client  # Declare client as global at the beginning
+
 import os
 from dotenv import load_dotenv
 import mysql.connector
@@ -143,7 +145,6 @@ def publish_stats():
             logger.info(f"Publish result for recent matches: {ret}")  # Check return value
         else:
             logger.error("MQTT client not connected, attempting to reconnect")
-            global client
             client = connect_mqtt() #attempt to re-establish the connection
             if client and client.is_connected():
                 logger.info("Reconnected to MQTT Broker")
