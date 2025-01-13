@@ -400,6 +400,8 @@ def add_match():
     tournaments = []
     stadiums = []
     message = None
+
+    # Initialize all selected variables to None for the GET request
     player1_selected = None
     player2_selected = None
     p1_combo_selected = None
@@ -412,7 +414,7 @@ def add_match():
     stadium_selected = None
 
     try:
-        # Fetch data for dropdowns
+        # Fetch data for dropdowns (This is the same for both GET and POST)
         try:
             cursor.execute("SELECT player_name FROM Players")
             players = [{"player_name": player[0]} for player in cursor.fetchall()]
@@ -444,6 +446,7 @@ def add_match():
             logger.debug(f"Error retrieving stadiums: {e}")
 
         if request.method == 'POST':
+            # ... (POST request handling - same as previous corrected version)
             player1_name = request.form.get('player1_name')
             player2_name = request.form.get('player2_name')
             p1_combo_name = request.form.get('player1_combination_name')
@@ -506,6 +509,19 @@ def add_match():
                 logger.error(f"Error adding match: {e}")
                 message = f"Error adding match: {e}"
                 return f"Error adding match: {e}", 500
+        #GET Request
+        else:
+            message = request.args.get('message')
+            player1_selected = request.args.get('player1_selected')
+            player2_selected = request.args.get('player2_selected')
+            p1_combo_selected = request.args.get('p1_combo_selected')
+            p2_combo_selected = request.args.get('p2_combo_selected')
+            p1_launcher_selected = request.args.get('p1_launcher_selected')
+            p2_launcher_selected = request.args.get('p2_launcher_selected')
+            winner_selected = request.args.get('winner_selected')
+            tournament_selected = request.args.get('tournament_selected')
+            finish_selected = request.args.get('finish_selected')
+            stadium_selected = request.args.get('stadium_selected')
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
@@ -514,7 +530,7 @@ def add_match():
         if conn:
             conn.close()
 
-    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_name, p1_launcher_selected=p1_launcher_name, p2_launcher_selected=p2_launcher_name, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected, stadium_selected=stadium_selected)
+    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_name, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected, stadium_selected=stadium_selected)
 
 @app.route('/')  # Route for the landing page
 def index():
