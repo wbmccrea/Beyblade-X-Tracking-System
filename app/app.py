@@ -127,7 +127,7 @@ def publish_stats():
     except Exception as e:
         logger.error(f"Error publishing stats to MQTT: {e}")
 
-@app.before_first_request
+@app.before_request
 def on_startup():
     publish_stats() #publish at startup
 
@@ -528,7 +528,7 @@ def add_match():
 
                 # Publish updated stats to MQTT after successful commit
                 publish_stats()
-                
+
                 message = "Match added successfully!"
                 player1_selected = player1_name
                 player2_selected = player2_name
