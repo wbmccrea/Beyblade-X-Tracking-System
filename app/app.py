@@ -256,18 +256,23 @@ def publish_stats():
 
         client = g.mqtt_client
 
-    if client and connected_flag:
-        publish_discovery_config(client) # Publish the discovery configuration
+        if client and connected_flag:
+            publish_discovery_config(client, player_stats, combination_stats)  # Publish the discovery config
 
-        publish_mqtt_message(client, "player_stats", player_stats_json)
-        publish_mqtt_message(client, "recent_matches", recent_matches_json)
-        publish_mqtt_message(client, "combination_stats", combination_stats_json)
+            try:
+                publish_mqtt_message(client, "player_stats", player_stats_json)
+                publish_mqtt_message(client, "recent_matches", recent_matches_json)
+                publish_mqtt_message(client, "combination_stats", combination_stats_json)
+            except Exception as e:
+                logger.error(f"Error publishing stats: {e}")
+        else:
+            logger.error("MQTT client not connected, cannot publish stats")
 
-    else:
-        logger.error("MQTT client not connected, cannot publish stats")
+        conn.close()
+        logger.info("Stats published to MQTT (if successful)")
 
-    conn.close()
-    logger.info("Stats published to MQTT (if successful)")                     
+    except Exception as e:
+        logger.error(f"Error publishing stats to MQTT: {e}")
 
 def publish_mqtt_message(client, stat_type, json_data):
     topic = MQTT_TOPIC_PREFIX + stat_type
