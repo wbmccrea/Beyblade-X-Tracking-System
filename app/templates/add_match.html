@@ -14,31 +14,27 @@
         .container {
             display: flex;
             gap: 20px;
-            margin-bottom: 20px; /* Space below the player columns */
+            margin-bottom: 20px;
         }
 
         .column {
             flex: 1;
-            border: 1px solid #ccc; /* Add borders to columns */
-            padding: 10px;        /* Add padding within columns */
+            border: 1px solid #ccc;
+            padding: 10px;
         }
 
-        .stadium-container {
+        .stadium-container, .tournament-container { /* Combined styles */
             text-align: center;
-            margin-bottom: 20px; /* Space below stadium select */
+            margin-bottom: 20px;
         }
 
         .outcome-buttons {
             display: flex;
-            flex-direction: column; /* Stack buttons vertically */
-            gap: 5px; /* Space between buttons */
+            flex-direction: column;
+            gap: 5px;
             align-items: stretch;
         }
-        .outcome-container{
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
+
         .draw-container {
             text-align: center;
             margin-bottom: 20px;
@@ -47,16 +43,17 @@
         .submit-container {
             text-align: center;
         }
-        .submit-container input[type="submit"]{
-            padding: 10px 20px; /* Add padding to the links */
-            background-color: #4CAF50; /* Green */
+
+        .submit-container input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #4CAF50;
             border: none;
             color: white;
             text-align: center;
             text-decoration: none;
             display: inline-block;
             font-size: 16px;
-            border-radius: 5px; /* Rounded corners */
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -78,7 +75,17 @@
             </select><br><br>
         </div>
 
-        <div class="container">
+        <div class="tournament-container"> <!-—Tournament Select Centered Below Stadium-->
+            <label for="tournament_name">Tournament:</label><br>
+            <select id="tournament_name" name="tournament_name">
+                <option value="">Select Tournament (Optional)</option>
+                {% for tournament in tournaments %}
+                <option value="{{ tournament['tournament_name'] }}" {% if tournament['tournament_name'] == tournament_selected %}selected{% endif %}>{{ tournament['tournament_name'] }}</option>
+                {% endfor %}
+            </select><br><br>
+        </div>
+
+        <div class="container"> <!-—Player 1 & Player 2 Information-->
             <div class="column">
                 <h2>Player 1</h2>
                 <label for="player1_name">Player 1 Name:</label><br>
