@@ -100,11 +100,9 @@ def publish_stats():
             logger.error("Database connection error during stats publishing")
             return
 
-        cursor = conn.cursor()
-
         player_stats = []
         with conn.cursor() as cursor_player:
-           try:
+            try:
                 cursor_player.execute("SELECT player_id, player_name FROM Players")
                 players = cursor_player.fetchall()
                 logger.info(f"Players retrieved: {players}")
@@ -139,11 +137,17 @@ def publish_stats():
                     result = cursor_player.fetchone()
                     logger.info(f"Result: {result}")
 
-                    if result:  # Check if result is not None
+                    if result:
                         wins, losses, draws, points = result
-                        points = int(points) if points is not None else 0 #Convert Decimal to int and handle None
+                        points = int(points) if points is not None else 0
                     else:
-                        wins, losses, draws, points = 0, 0, 0, 0  # Default values if no result
+                        wins, losses, draws, points = 0, 0, 0, 0
+
+                    total_matches = wins + losses
+                    total_possible_matches = wins + losses + draws
+
+                    win_rate = (wins / total_matches) * 100 if total_matches > 0 else 0
+                    non_loss_rate = ((wins + draws) / total_possible_matches) * 100 if total_possible_matches > 0 else 0
 
                     player_stats.append({
                         "name": player_name,
@@ -151,102 +155,56 @@ def publish_stats():
                         "losses": losses,
                         "draws": draws,
                         "points": points,
-                        "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0,
-                        "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0,
+                        "win_rate": win_rate,
+                        "non_loss_rate": non_loss_rate,
                     })
             except mysql.connector.errors.ProgrammingError as e:
                 logger.error(f"Player Stats SQL Programming Error: {e}")
             except Exception as e:
                 logger.error(f"Player stats error: {e}")
 
-         # Recent Matches
+        # Recent Matches (Unchanged, but included for completeness)
         recent_matches = []
-        cursor_matches = conn.cursor() #New Cursor
+        with conn.cursor() as cursor_matches:
+            try:
+                cursor_matches.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
+                matches = cursor_matches.fetchall()
+                column_names = [desc[0] for desc in cursor_matches.description]
+
+                for match in matches:
+                    match_dict = dict(zip(column_names, match))
+                    if "match_time" in match_dict and match_dict["match_time"] is not None:
+                        match_dict["match_time"] = match_dict["match_time"].isoformat()
+                    recent_matches.append(match_dict)
+            except Exception as e:
+                logger.error(f"Recent matches error: {e}")
+
         try:
-            cursor_matches.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
-            matches = cursor.fetchall()
-            column_names = [desc[0] for desc in cursor.description]
+            player_stats_json = json.dumps(player_stats, default=str) #Added default=str
+            recent_matches_json = json.dumps(recent_matches, default=str)
+        except TypeError as e:
+            logger.error(f"JSON Encoding Error: {e}")
+            return #Exit the function if JSON encoding fails to prevent further errors.
+        except Exception as e:
+            logger.error(f"Unexpected error during JSON encoding: {e}")
+            return
 
-            for match in matches:
-                match_dict = dict(zip(column_names, match))
-                # Convert datetime object to string
-                if "match_time" in match_dict and match_dict["match_time"] is not None:
-                    match_dict["match_time"] = match_dict["match_time"].isoformat()
-                recent_matches.append(match_dict)
-        finally:
-            cursor_matches.close() #Close the cursor when done
+        client = g.mqtt_client
 
-#        # Combination Stats
-#        combination_stats = []
-#        cursor_combination = conn.cursor()
-#        try:
-#            cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
-#            combinations = cursor_combination.fetchall()
-#            for combination_id, combination_name in combinations:
-#                sql = """
-#                    SELECT
-#                        COUNT(DISTINCT m.match_id) AS matches_played,
-#                        COUNT(CASE WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
-#                        SUM(CASE
-#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Survivor' THEN 1
-#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'KO' THEN 2
-#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Burst' THEN 2
-#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Extreme' THEN 3
-#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Survivor' THEN 1
-#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'KO' THEN 2
-#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Burst' THEN 2
-#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Extreme' THEN 3
-#                            ELSE 0
-#                        END) AS points
-#                    FROM BeybladeCombinations bc
-#                    LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
-#                    WHERE bc.combination_id = %s
-#                """
-#                parameters = (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id)
-#                mogrified_sql = cursor_combination.mogrify(sql, parameters)
-#                logger.debug(f"Executing combination stats query: {mogrified_sql}")  # Log the FULL QUERY
-#                cursor_combination.execute(sql, parameters)
-#                result = cursor_combination.fetchone()
-#                matches_played, wins, points = result or (0, 0, 0)
-#                combination_stats.append({
-#                    "name": combination_name,
-#                    "matches_played": matches_played,
-#                    "wins": wins,
-#                    "points": int(points),
-#                    "win_rate": (wins / matches_played) * 100 if matches_played > 0 else 0,
-#                    "non_loss_rate": ((wins + (matches_played - wins)) / matches_played) * 100 if matches_played > 0 else 0,
-#                })
-#        finally:
-#            cursor_combination.close()
-
-        # Convert data to JSON format
-
-        player_stats_json = json.dumps(player_stats)
-        recent_matches_json = json.dumps(recent_matches)
-#        combination_stats_json = json.dumps(combination_stats)
-
-        logger.info(f"Publishing player stats: {player_stats_json}")
-        logger.info(f"Publishing recent matches: {recent_matches_json}")
-#        logger.info(f"Publishing combination stats: {combination_stats_json}")
-
-        client = g.mqtt_client  
-
-        if client and connected_flag:  # Check the flag!
-            # Publish player stats (unchanged)
+        if client and connected_flag:
             logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'player_stats'}")
             ret = client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
-            logger.info(f"Publish result for player stats: {ret}")  # Check return value
+            if ret[0] == 0:
+                logger.info("Publish successful for player stats")
+            else:
+                logger.error(f"Publish failed for player stats: {ret}")
 
-            # Publish recent matches (unchanged)
             logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'recent_matches'}")
             ret = client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
-            logger.info(f"Publish result for recent matches: {ret}")  # Check return value
-
-            # **New: Publish combination stats**
-#            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'combination_stats'}")
-#            ret = client.publish(MQTT_TOPIC_PREFIX + "combination_stats", combination_stats_json)  # Typo corrected: "recent_matches" should be "combination_stats"
-#            logger.info(f"Publish result for combination stats: {ret}")
-
+            if ret[0] == 0:
+                logger.info("Publish successful for recent matches")
+            else:
+                logger.error(f"Publish failed for recent matches: {ret}")
         else:
             logger.error("MQTT client not connected, cannot publish stats")
 
