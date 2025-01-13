@@ -3,7 +3,7 @@ global client  # Declare client as global at the beginning
 import os
 from dotenv import load_dotenv
 import mysql.connector
-from flask import Flask, jsonify, request, render_template, redirect, url_for
+from flask import Flask, jsonify, request, render_template, redirect, url_for, g
 from datetime import datetime
 from urllib.parse import unquote
 import logging
@@ -12,6 +12,7 @@ import operator
 import paho.mqtt.client as mqtt
 import json
 import time
+import threading
 
 
 load_dotenv()
@@ -50,6 +51,7 @@ def get_db_connection():
         return None
 
 client = None  # Global client variable initialized to None
+connected_flag = False
 
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
@@ -70,7 +72,7 @@ def connect_mqtt():
     try:
         client.connect(MQTT_BROKER, MQTT_PORT)
         client.loop_start()
-        print("Client connected:", client)  # Add this line
+        logger.info("MQTT Client Connected!")
         return client
     except Exception as e:
         logger.error(f"MQTT connection error: {e}")
@@ -94,7 +96,15 @@ if client is None:
         logger.critical("Failed to connect to MQTT after multiple retries. Exiting.")
         exit(1)
 
+def mqtt_loop():
+    global client
+    while True: # loop forever to process events
+        if client:
+            client.loop(timeout=0.1)  # Process MQTT events with a timeout
+        time.sleep(0.01) # small delay to avoid excessive CPU usage
+
 def publish_stats():
+    global connected_flag
     logger.info("publish_stats() called")
     try:
         conn = get_db_connection()
@@ -134,8 +144,9 @@ def publish_stats():
         logger.info(f"Publishing player stats: {player_stats_json}")
         logger.info(f"Publishing recent matches: {recent_matches_json}")
 
-        client = connect_mqtt() #create the client inside the function
-        if client and client.connected: #check if client exists before checking if it is connected
+        client = g.mqtt_client  
+
+        if client and connected_flag:  # Check the flag!
             logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'player_stats'}")
             ret = client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
             logger.info(f"Publish result for player stats: {ret}")  # Check return value
@@ -144,14 +155,7 @@ def publish_stats():
             ret = client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
             logger.info(f"Publish result for recent matches: {ret}")  # Check return value
         else:
-            logger.error("MQTT client not connected, attempting to reconnect")
-            client = connect_mqtt() #attempt to re-establish the connection
-            if client and client.is_connected():
-                logger.info("Reconnected to MQTT Broker")
-                client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
-                client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
-            else:
-                logger.error("Failed to re-establish MQTT connection")
+            logger.error("MQTT client not connected, cannot publish stats")
 
         conn.close()
         logger.info("Stats published to MQTT (if successful)")
@@ -163,6 +167,20 @@ def publish_stats():
 def on_startup():
     logger.info("starting")
     publish_stats() #publish at startup
+
+@app.teardown_request
+def teardown_request(exception):
+    if hasattr(g, 'mqtt_client'):
+        g.mqtt_client = None
+
+# Start MQTT loop in a separate thread when the app starts
+client = connect_mqtt()
+if client:
+    mqtt_thread = threading.Thread(target=mqtt_loop)
+    mqtt_thread.daemon = True
+    mqtt_thread.start()
+else:
+    logger.error("Failed to establish initial MQTT connection")
 
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
