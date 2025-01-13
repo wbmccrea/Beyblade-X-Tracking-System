@@ -573,7 +573,7 @@ def add_match():
                 p1_launcher_selected = p1_launcher_name
                 p2_launcher_selected = p2_launcher_name
                 winner_selected = winner_name
-                tournament_selected = tournament_id
+                tournament_selected = tournament_name
                 finish_selected = finish_type
                 stadium_selected = stadium_name
 
