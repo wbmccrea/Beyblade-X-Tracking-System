@@ -104,15 +104,15 @@ def publish_stats():
 
         player_stats = []
         with conn.cursor() as cursor_player:
-            try:
+           try:
                 cursor_player.execute("SELECT player_id, player_name FROM Players")
                 players = cursor_player.fetchall()
-                print(f"Players retrieved: {players}")
+                logger.info(f"Players retrieved: {players}")
 
                 for player_id, player_name in players:
-                    if not player_id:  # Check if player_id is None or empty
+                    if not player_id:
                         logger.warning(f"Skipping player with invalid ID: {player_name}")
-                        continue  # Skip to the next player
+                        continue
 
                     sql = """
                         SELECT
@@ -130,18 +130,27 @@ def publish_stats():
                         WHERE player1_id = %(player_id)s OR player2_id = %(player_id)s;
                     """
                     parameters = {'player_id': player_id}
-                    print(f"Player ID: {player_id}")
-                    print(f"Player Name: {player_name}")
-                    print(f"SQL: {sql}")
-                    print(f"Parameters: {parameters}")
+                    logger.info(f"Player ID: {player_id}")
+                    logger.info(f"Player Name: {player_name}")
+                    logger.info(f"SQL: {sql}")
+                    logger.info(f"Parameters: {parameters}")
 
                     cursor_player.execute(sql, parameters)
                     result = cursor_player.fetchone()
-                    print(f"Result: {result}")
-                    wins, losses, draws, points = result or (0, 0, 0, 0)
+                    logger.info(f"Result: {result}")
+
+                    if result:  # Check if result is not None
+                        wins, losses, draws, points = result
+                        points = int(points) if points is not None else 0 #Convert Decimal to int and handle None
+                    else:
+                        wins, losses, draws, points = 0, 0, 0, 0  # Default values if no result
+
                     player_stats.append({
                         "name": player_name,
-                        "wins": wins, "losses": losses, "draws": draws, "points": int(points),
+                        "wins": wins,
+                        "losses": losses,
+                        "draws": draws,
+                        "points": points,
                         "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0,
                         "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0,
                     })
@@ -1647,7 +1656,7 @@ def publish_stats_to_mqtt(client):
                     player_points[player] = str(points)  # Convert Decimal to string
 
             client.publish(base_topic + "name", player_name, retain=True)
-            print(f"player_points data: {player_points}")  # Print the data for inspection
+            logger.info(f"player_points data: {player_points}")  # Print the data for inspection
             player_points_json = json.dumps(player_points)
             client.publish(base_topic + "points", player_points_json, retain=True)
             client.publish(base_topic + "points", player_points, retain=True)
