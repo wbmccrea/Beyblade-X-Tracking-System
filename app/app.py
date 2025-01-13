@@ -151,58 +151,58 @@ def publish_stats():
         finally:
             cursor_matches.close() #Close the cursor when done
 
-        # Combination Stats
-        combination_stats = []
-        cursor_combination = conn.cursor()
-        try:
-            cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
-            combinations = cursor_combination.fetchall()
-            for combination_id, combination_name in combinations:
-                sql = """
-                    SELECT
-                        COUNT(DISTINCT m.match_id) AS matches_played,
-                        COUNT(CASE WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
-                        SUM(CASE
-                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Survivor' THEN 1
-                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'KO' THEN 2
-                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Burst' THEN 2
-                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Extreme' THEN 3
-                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Survivor' THEN 1
-                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'KO' THEN 2
-                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Burst' THEN 2
-                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Extreme' THEN 3
-                            ELSE 0
-                        END) AS points
-                    FROM BeybladeCombinations bc
-                    LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
-                    WHERE bc.combination_id = %s
-                """
-                parameters = (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id)
-                mogrified_sql = cursor_combination.mogrify(sql, parameters)
-                logger.debug(f"Executing combination stats query: {mogrified_sql}")  # Log the FULL QUERY
-                cursor_combination.execute(sql, parameters)
-                result = cursor_combination.fetchone()
-                matches_played, wins, points = result or (0, 0, 0)
-                combination_stats.append({
-                    "name": combination_name,
-                    "matches_played": matches_played,
-                    "wins": wins,
-                    "points": int(points),
-                    "win_rate": (wins / matches_played) * 100 if matches_played > 0 else 0,
-                    "non_loss_rate": ((wins + (matches_played - wins)) / matches_played) * 100 if matches_played > 0 else 0,
-                })
-        finally:
-            cursor_combination.close()
+#        # Combination Stats
+#        combination_stats = []
+#        cursor_combination = conn.cursor()
+#        try:
+#            cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
+#            combinations = cursor_combination.fetchall()
+#            for combination_id, combination_name in combinations:
+#                sql = """
+#                    SELECT
+#                        COUNT(DISTINCT m.match_id) AS matches_played,
+#                        COUNT(CASE WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
+#                        SUM(CASE
+#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Survivor' THEN 1
+#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'KO' THEN 2
+#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Burst' THEN 2
+#                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Extreme' THEN 3
+#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Survivor' THEN 1
+#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'KO' THEN 2
+#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Burst' THEN 2
+#                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Extreme' THEN 3
+#                            ELSE 0
+#                        END) AS points
+#                    FROM BeybladeCombinations bc
+#                    LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
+#                    WHERE bc.combination_id = %s
+#                """
+#                parameters = (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id)
+#                mogrified_sql = cursor_combination.mogrify(sql, parameters)
+#                logger.debug(f"Executing combination stats query: {mogrified_sql}")  # Log the FULL QUERY
+#                cursor_combination.execute(sql, parameters)
+#                result = cursor_combination.fetchone()
+#                matches_played, wins, points = result or (0, 0, 0)
+#                combination_stats.append({
+#                    "name": combination_name,
+#                    "matches_played": matches_played,
+#                    "wins": wins,
+#                    "points": int(points),
+#                    "win_rate": (wins / matches_played) * 100 if matches_played > 0 else 0,
+#                    "non_loss_rate": ((wins + (matches_played - wins)) / matches_played) * 100 if matches_played > 0 else 0,
+#                })
+#        finally:
+#            cursor_combination.close()
 
         # Convert data to JSON format
 
         player_stats_json = json.dumps(player_stats)
         recent_matches_json = json.dumps(recent_matches)
-        combination_stats_json = json.dumps(combination_stats)
+#        combination_stats_json = json.dumps(combination_stats)
 
         logger.info(f"Publishing player stats: {player_stats_json}")
         logger.info(f"Publishing recent matches: {recent_matches_json}")
-        logger.info(f"Publishing combination stats: {combination_stats_json}")
+#        logger.info(f"Publishing combination stats: {combination_stats_json}")
 
         client = g.mqtt_client  
 
@@ -218,9 +218,9 @@ def publish_stats():
             logger.info(f"Publish result for recent matches: {ret}")  # Check return value
 
             # **New: Publish combination stats**
-            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'combination_stats'}")
-            ret = client.publish(MQTT_TOPIC_PREFIX + "combination_stats", combination_stats_json)  # Typo corrected: "recent_matches" should be "combination_stats"
-            logger.info(f"Publish result for combination stats: {ret}")
+#            logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'combination_stats'}")
+#            ret = client.publish(MQTT_TOPIC_PREFIX + "combination_stats", combination_stats_json)  # Typo corrected: "recent_matches" should be "combination_stats"
+#            logger.info(f"Publish result for combination stats: {ret}")
 
         else:
             logger.error("MQTT client not connected, cannot publish stats")
