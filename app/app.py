@@ -461,7 +461,7 @@ def add_match():
                 except ValueError:
                     return "Invalid Tournament ID", 400
             else:
-            tournament_id = None  # Set to None if no tournament is selected
+                tournament_id = None  # Set to None if no tournament is selected
             finish_type = request.form.get('finish_type')
             winner_name = request.form.get('winner_name')
 
