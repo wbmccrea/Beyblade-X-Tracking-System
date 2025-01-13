@@ -47,21 +47,21 @@ def get_db_connection():
         logger.debug(f"Database connection error: {e}")
         return None
 
-def on_connect(client, userdata, flags, rc):
-    if rc == 0:
-        logger.debug("Connected to MQTT Broker!")
-    else:
-        logger.error(f"Failed to connect to MQTT, return code {rc}")
-
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
             logger.info("Connected to MQTT Broker!")
         else:
             logger.error(f"Failed to connect to MQTT, return code {rc}")
+    def on_disconnect(client, userdata, rc):
+        if rc != 0:
+            logger.error(f"Disconnected from MQTT Broker with code {rc}. Attempting to reconnect...")
+            time.sleep(5)  # Wait before retrying
+            connect_mqtt()
 
     client = mqtt.Client()
     client.on_connect = on_connect
+    client.on_disconnect = on_disconnect
     client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
     try:
         client.connect(MQTT_BROKER, MQTT_PORT)
@@ -89,6 +89,47 @@ if client is None:
         logger.critical("Failed to connect to MQTT after multiple retries. Exiting.")
         exit(1)
 
+def publish_stats():
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            logger.error("Database connection error during stats publishing")
+            return
+
+        cursor = conn.cursor()
+
+        player_stats = []
+        cursor.execute("SELECT player_id, player_name FROM Players")
+        players = cursor.fetchall()
+
+        for player_id, player_name in players:
+            cursor.execute("SELECT COUNT(*) FROM Matches WHERE winner_id = %s", (player_id,))
+            wins = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM Matches WHERE (player1_id = %s OR player2_id = %s) AND winner_id IS NOT NULL AND winner_id != %s", (player_id, player_id, player_id))
+            losses = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM Matches WHERE (player1_id = %s OR player2_id = %s) AND draw = 1", (player_id, player_id))
+            draws = cursor.fetchone()[0]
+            player_stats.append({"name": player_name, "wins": wins, "losses": losses, "draws": draws})
+        recent_matches = [] #example
+        cursor.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
+        recent_matches = [dict(zip(cursor.column_names, row)) for row in cursor.fetchall()]
+
+        # Format data as JSON
+        player_stats_json = json.dumps(player_stats)
+        recent_matches_json = json.dumps(recent_matches)
+
+        # Publish to MQTT
+        client.publish(MQTT_TOPIC_PREFIX + "player_stats", player_stats_json)
+        client.publish(MQTT_TOPIC_PREFIX + "recent_matches", recent_matches_json)
+        conn.close()
+        logger.info("Stats published to MQTT")
+
+    except Exception as e:
+        logger.error(f"Error publishing stats to MQTT: {e}")
+
+@app.before_first_request
+def on_startup():
+    publish_stats() #publish at startup
 
 def get_id_by_name(table, name, id_column):
     conn = get_db_connection()
@@ -485,6 +526,9 @@ def add_match():
                 cursor.execute(sql, val)
                 conn.commit()
 
+                # Publish updated stats to MQTT after successful commit
+                publish_stats()
+                
                 message = "Match added successfully!"
                 player1_selected = player1_name
                 player2_selected = player2_name
