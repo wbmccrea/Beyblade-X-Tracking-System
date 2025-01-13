@@ -54,54 +54,26 @@ client = None  # Global client variable initialized to None
 connected_flag = False
 
 def connect_mqtt():
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            logger.info("Connected to MQTT Broker!")
-        else:
-            logger.error(f"Failed to connect to MQTT, return code {rc}")
-    def on_disconnect(client, userdata, rc):
-        if rc != 0:
-            logger.error(f"Disconnected from MQTT Broker with code {rc}. Attempting to reconnect...")
-            time.sleep(5)  # Wait before retrying
-            connect_mqtt()
-
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_disconnect = on_disconnect
-    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-    try:
-        client.connect(MQTT_BROKER, MQTT_PORT)
-        client.loop_start()
-        logger.info("MQTT Client Connected!")
-        return client
-    except Exception as e:
-        logger.error(f"MQTT connection error: {e}")
-        return None
-
-client = connect_mqtt()
-
-if client is None:
-    retry_count = 0
-    max_retries = 5
-    delay = 5
-    while retry_count < max_retries:
-        retry_count += 1
-        logger.info(f"Retrying MQTT connection in {delay} seconds... (Attempt {retry_count}/{max_retries})")
-        time.sleep(delay)
-        client = connect_mqtt()
-        delay *= 2 # Exponential backoff
-        if client:
-            break
-    if client is None:
-        logger.critical("Failed to connect to MQTT after multiple retries. Exiting.")
-        exit(1)
+    if not client:  # Check if client already exists
+        client = mqtt.Client()
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+        try:
+            client.connect(MQTT_BROKER, MQTT_PORT)
+            return client
+        except Exception as e:
+            logger.error(f"MQTT connection error: {e}")
+            return None
+    else:
+        return client  # Return existing client if already connected
 
 def mqtt_loop():
     global client
-    while True: # loop forever to process events
+    while True:
         if client:
             client.loop(timeout=0.1)  # Process MQTT events with a timeout
-        time.sleep(0.01) # small delay to avoid excessive CPU usage
+        time.sleep(0.01)   
 
 def publish_stats():
     global connected_flag
