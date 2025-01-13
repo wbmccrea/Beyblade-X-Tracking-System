@@ -127,8 +127,7 @@ def publish_stats():
                     print(f"Player Stats Number of parameters: {len(parameters)}")
                     print(f"Player ID: {player_id}") #Print the player id
                     print(f"Player Name: {player_name}") #Print the player name
-                    mogrified_sql = cursor_player.mogrify(sql, parameters)
-                    print(f"Player Stats Mogrified SQL: {mogrified_sql}")
+                    # Removed mogrify, directly execute the query
                     cursor_player.execute(sql, parameters)
                     result = cursor_player.fetchone()
                     wins, losses, draws, points = result or (0, 0, 0, 0)
