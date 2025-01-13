@@ -386,7 +386,8 @@ def add_tournament():
     return render_template('add_tournament.html')
 
 if __name__ == '__main__':
-    
+    app.run(debug=True, host='0.0.0.0')
+
 @app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match")
 def add_match():
     conn = get_db_connection()
