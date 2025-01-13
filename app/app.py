@@ -103,80 +103,92 @@ def publish_stats():
         cursor = conn.cursor()
 
         player_stats = []
-        cursor.execute("SELECT player_id, player_name FROM Players")
-        players = cursor.fetchall()
-        for player_id, player_name in players:
-            cursor.execute("""
-                SELECT
-                    COUNT(CASE WHEN winner_id = %s THEN 1 END) AS wins,
-                    COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND winner_id IS NOT NULL AND winner_id != %s THEN 1 END) AS losses,
-                    COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND draw = 1 THEN 1 END) AS draws,
-                    SUM(CASE
-                        WHEN winner_id = %s AND finish_type = 'Survivor' THEN 1
-                        WHEN winner_id = %s AND finish_type = 'KO' THEN 2
-                        WHEN winner_id = %s AND finish_type = 'Burst' THEN 2
-                        WHEN winner_id = %s AND finish_type = 'Extreme' THEN 3
-                        ELSE 0
-                    END) AS points
-                FROM Matches
-                WHERE player1_id = %s OR player2_id = %s;
-            """, (player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id))
-            result = cursor.fetchone()
-            wins, losses, draws, points = result or (0, 0, 0, 0)  # Handle potential None result
-            player_stats.append({
-                "name": player_name,
-                "wins": wins, "losses": losses, "draws": draws, "points": int(points),
-                "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0, #Win Rate
-                "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0, #Non-loss Rate
-            })
+        cursor_player = conn.cursor() #New Cursor
+        try:
+            cursor_player.execute("SELECT player_id, player_name FROM Players")
+            players = cursor_player.fetchall()
+            for player_id, player_name in players:
+                cursor_player.execute("""
+                    SELECT
+                        COUNT(CASE WHEN winner_id = %s THEN 1 END) AS wins,
+                        COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND winner_id IS NOT NULL AND winner_id != %s THEN 1 END) AS losses,
+                        COUNT(CASE WHEN (player1_id = %s OR player2_id = %s) AND draw = 1 THEN 1 END) AS draws,
+                        SUM(CASE
+                            WHEN winner_id = %s AND finish_type = 'Survivor' THEN 1
+                            WHEN winner_id = %s AND finish_type = 'KO' THEN 2
+                            WHEN winner_id = %s AND finish_type = 'Burst' THEN 2
+                            WHEN winner_id = %s AND finish_type = 'Extreme' THEN 3
+                            ELSE 0
+                        END) AS points
+                    FROM Matches
+                    WHERE player1_id = %s OR player2_id = %s;
+                """, (player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id, player_id))
+                result = cursor.fetchone()
+                wins, losses, draws, points = result or (0, 0, 0, 0)  # Handle potential None result
+                player_stats.append({
+                    "name": player_name,
+                    "wins": wins, "losses": losses, "draws": draws, "points": int(points),
+                    "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0, #Win Rate
+                    "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0, #Non-loss Rate
+                })
+        finally
+            cursor_player.close() #Close the cursor when done
 
          # Recent Matches
         recent_matches = []
-        cursor.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
-        matches = cursor.fetchall()
-        column_names = [desc[0] for desc in cursor.description]
+        cursor_matches = conn.cursor() #New Cursor
+        try:
+            cursor_matches.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
+            matches = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
 
-        for match in matches:
-            match_dict = dict(zip(column_names, match))
-            # Convert datetime object to string
-            if "match_time" in match_dict and match_dict["match_time"] is not None:
-                match_dict["match_time"] = match_dict["match_time"].isoformat()
-            recent_matches.append(match_dict)
+            for match in matches:
+                match_dict = dict(zip(column_names, match))
+                # Convert datetime object to string
+                if "match_time" in match_dict and match_dict["match_time"] is not None:
+                    match_dict["match_time"] = match_dict["match_time"].isoformat()
+                recent_matches.append(match_dict)
+        finally
+            cursor_matches.close() #Close the cursor when done
 
         # Combination Stats
         combination_stats = []
-        cursor.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
-        combinations = cursor.fetchall()
-        for combination_id, combination_name in combinations:
-            cursor.execute("""
-                SELECT
-                    COUNT(DISTINCT m.match_id) AS matches_played,
-                    COUNT(CASE WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
-                    SUM(CASE
-                        WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Survivor' THEN 1
-                        WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'KO' THEN 2
-                        WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Burst' THEN 2
-                        WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Extreme' THEN 3
-                        WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Survivor' THEN 1
-                        WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'KO' THEN 2
-                        WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Burst' THEN 2
-                        WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Extreme' THEN 3
-                        ELSE 0
-                    END) AS points
-                FROM BeybladeCombinations bc
-                LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
-                WHERE bc.combination_id = %s
-            """, (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id)) #14 parameters
-            result = cursor.fetchone()
-            matches_played, wins, points = result or (0, 0, 0)
-            combination_stats.append({
-                "name": combination_name,
-                "matches_played": matches_played,
-                "wins": wins,
-                "points": int(points),
-                "win_rate": (wins / matches_played) * 100 if matches_played > 0 else 0,
-                "non_loss_rate": ((wins + (matches_played - wins)) / matches_played) * 100 if matches_played > 0 else 0,
-            })
+        cursor_combination = conn.cursor()
+        try:
+            cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
+            combinations = cursor_combination.fetchall()
+            for combination_id, combination_name in combinations:
+                cursor_combination.execute("""
+                    SELECT
+                        COUNT(DISTINCT m.match_id) AS matches_played,
+                        COUNT(CASE WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id THEN 1 WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id THEN 1 END) AS wins,
+                        SUM(CASE
+                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Survivor' THEN 1
+                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'KO' THEN 2
+                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Burst' THEN 2
+                            WHEN m.player1_combination_id = %s AND m.winner_id = m.player1_id AND m.finish_type = 'Extreme' THEN 3
+                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Survivor' THEN 1
+                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'KO' THEN 2
+                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Burst' THEN 2
+                            WHEN m.player2_combination_id = %s AND m.winner_id = m.player2_id AND m.finish_type = 'Extreme' THEN 3
+                            ELSE 0
+                        END) AS points
+                    FROM BeybladeCombinations bc
+                    LEFT JOIN Matches m ON bc.combination_id = m.player1_combination_id OR bc.combination_id = m.player2_combination_id
+                    WHERE bc.combination_id = %s
+                """, (combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id, combination_id))
+                result = cursor_combination.fetchone()  # Corrected line
+                matches_played, wins, points = result or (0, 0, 0)
+                combination_stats.append({
+                    "name": combination_name,
+                    "matches_played": matches_played,
+                    "wins": wins,
+                    "points": int(points),
+                    "win_rate": (wins / matches_played) * 100 if matches_played > 0 else 0,
+                    "non_loss_rate": ((wins + (matches_played - wins)) / matches_played) * 100 if matches_played > 0 else 0,
+                })
+        finally:
+            cursor_combination.close()
 
         # Convert data to JSON format
 
