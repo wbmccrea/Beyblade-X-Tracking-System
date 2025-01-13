@@ -54,7 +54,8 @@ client = None  # Global client variable initialized to None
 connected_flag = False
 
 def connect_mqtt():
-    if not client:  # Check if client already exists
+    global client # This is needed to modify the global client variable
+    if client is None:  # Correct check: if client is None
         client = mqtt.Client()
         client.on_connect = on_connect
         client.on_disconnect = on_disconnect
@@ -65,8 +66,7 @@ def connect_mqtt():
         except Exception as e:
             logger.error(f"MQTT connection error: {e}")
             return None
-    else:
-        return client  # Return existing client if already connected
+    return client # Return the client whether it's new or existing
 
 def mqtt_loop():
     global client
