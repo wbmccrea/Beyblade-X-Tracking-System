@@ -531,7 +531,7 @@ def add_match():
         if conn:
             conn.close()
 
-    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_selected, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected,
+    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_name, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected, stadium_selected=stadium_selected)
 
 @app.route('/')  # Route for the landing page
 def index():
