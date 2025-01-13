@@ -103,18 +103,31 @@ def publish_stats():
         cursor = conn.cursor()
 
         player_stats = []
-        try:
-            with conn.cursor() as cursor_player:
-                # Get players
+        with conn.cursor() as cursor_player:
+            try:
                 cursor_player.execute("SELECT player_id, player_name FROM Players")
                 players = cursor_player.fetchall()
-                print(f"Players retrieved: {players}")  # Debug: Print retrieved players
+                print(f"Players retrieved: {players}")
 
                 for player_id, player_name in players:
+                    if not player_id:  # Check if player_id is None or empty
+                        logger.warning(f"Skipping player with invalid ID: {player_name}")
+                        continue  # Skip to the next player
+
                     sql = """
                         SELECT
                             COUNT(CASE WHEN winner_id = %(player_id)s THEN 1 END) AS wins,
-                            # ... (rest of the query)
+                            COUNT(CASE WHEN (player1_id = %(player_id)s OR player2_id = %(player_id)s) AND winner_id IS NOT NULL AND winner_id != %(player_id)s THEN 1 END) AS losses,
+                            COUNT(CASE WHEN (player1_id = %(player_id)s OR player2_id = %(player_id)s) AND draw = 1 THEN 1 END) AS draws,
+                            SUM(CASE
+                                WHEN winner_id = %(player_id)s AND finish_type = 'Survivor' THEN 1
+                                WHEN winner_id = %(player_id)s AND finish_type = 'KO' THEN 2
+                                WHEN winner_id = %(player_id)s AND finish_type = 'Burst' THEN 2
+                                WHEN winner_id = %(player_id)s AND finish_type = 'Extreme' THEN 3
+                                ELSE 0
+                            END) AS points
+                        FROM Matches
+                        WHERE player1_id = %(player_id)s OR player2_id = %(player_id)s;
                     """
                     parameters = {'player_id': player_id}
                     print(f"Player ID: {player_id}")
@@ -124,7 +137,7 @@ def publish_stats():
 
                     cursor_player.execute(sql, parameters)
                     result = cursor_player.fetchone()
-                    print(f"Result: {result}")  # Print the result
+                    print(f"Result: {result}")
                     wins, losses, draws, points = result or (0, 0, 0, 0)
                     player_stats.append({
                         "name": player_name,
@@ -132,7 +145,7 @@ def publish_stats():
                         "win_rate": (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0,
                         "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0,
                     })
-        except mysql.connector.errors.ProgrammingError as e: #Catch programming errors
+        except mysql.connector.errors.ProgrammingError as e:
             logger.error(f"Player Stats SQL Programming Error: {e}")
         except Exception as e:
             logger.error(f"Player stats error: {e}")
