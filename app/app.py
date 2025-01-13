@@ -163,7 +163,7 @@ def publish_stats():
 
             # **New: Publish combination stats**
             logger.info(f"Publishing to topic: {MQTT_TOPIC_PREFIX + 'combination_stats'}")
-            ret = client.publish(MQTT_TOPIC_PREFIX + "recent_matches", combination_stats_json)  # Typo corrected: "recent_matches" should be "combination_stats"
+            ret = client.publish(MQTT_TOPIC_PREFIX + "combination_stats", combination_stats_json)  # Typo corrected: "recent_matches" should be "combination_stats"
             logger.info(f"Publish result for combination stats: {ret}")
 
         else:
