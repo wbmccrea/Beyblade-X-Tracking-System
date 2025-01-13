@@ -123,12 +123,18 @@ def publish_stats():
                         FROM Matches
                         WHERE player1_id = %s OR player2_id = %s;
                     """
-                    parameters = (player_id,) * 11  # Create tuple with 11 player_ids
+                    print(f"SQL String: {sql}") #Print the sql string
+                    parameter_list = [player_id] * 11  # Create a list
+                    parameters = tuple(parameter_list)  # Convert to tuple
                     print(f"Player Stats Number of parameters: {len(parameters)}")
-                    print(f"Player ID: {player_id}") #Print the player id
-                    print(f"Player Name: {player_name}") #Print the player name
-                    # Removed mogrify, directly execute the query
-                    cursor_player.execute(sql, parameters)
+                    print(f"Player ID: {player_id}")
+                    print(f"Player Name: {player_name}")
+                    try:
+                        cursor_player.execute(sql, parameters)
+                    except mysql.connector.errors.ProgrammingError as e:
+                        logger.error(f"Player Stats SQL Programming Error: {e}")
+                    except Exception as e:
+                        logger.error(f"Player stats error: {e}")
                     result = cursor_player.fetchone()
                     wins, losses, draws, points = result or (0, 0, 0, 0)
                     player_stats.append({
@@ -138,7 +144,7 @@ def publish_stats():
                         "non_loss_rate": ((wins + draws) / (wins + losses + draws)) * 100 if (wins + losses + draws) > 0 else 0,
                     })
             except Exception as e:
-                logger.error(f"Player stats error: {e}")
+                logger.error(f"Player stats outer try error: {e}")
 
          # Recent Matches
         recent_matches = []
