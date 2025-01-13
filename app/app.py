@@ -385,7 +385,9 @@ def add_tournament():
             return f"Error adding tournament: {e}", 500  # Return user-friendly error message
     return render_template('add_tournament.html')
 
-if __name__ == '__main__':@app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match")
+if __name__ == '__main__':
+    
+@app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match")
 def add_match():
     conn = get_db_connection()
     if conn is None:
