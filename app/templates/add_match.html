@@ -3,12 +3,60 @@
 <head>
     <title>Add Match</title>
     <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
         .container {
             display: flex;
             gap: 20px;
+            margin-bottom: 20px; /* Space below the player columns */
         }
+
         .column {
             flex: 1;
+            border: 1px solid #ccc; /* Add borders to columns */
+            padding: 10px;        /* Add padding within columns */
+        }
+
+        .stadium-container {
+            text-align: center;
+            margin-bottom: 20px; /* Space below stadium select */
+        }
+
+        .outcome-buttons {
+            display: flex;
+            flex-direction: column; /* Stack buttons vertically */
+            gap: 5px; /* Space between buttons */
+            align-items: stretch;
+        }
+        .outcome-container{
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .draw-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .submit-container {
+            text-align: center;
+        }
+        .submit-container input[type="submit"]{
+            padding: 10px 20px; /* Add padding to the links */
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 5px; /* Rounded corners */
         }
     </style>
 </head>
@@ -16,10 +64,20 @@
     <h1>Add Match</h1>
 
     {% if message %}
-        <p style="color: green;">{{ message }}</p>
+        <p style="color: green; text-align: center;">{{ message }}</p>
     {% endif %}
 
     <form method="POST">
+        <div class="stadium-container">
+            <label for="stadium_name">Stadium:</label><br>
+            <select id="stadium_name" name="stadium_name" required>
+                <option value="">Select Stadium</option>
+                {% for stadium in stadiums %}
+                <option value="{{ stadium['stadium_name'] }}" {% if stadium['stadium_name'] == stadium_selected %}selected{% endif %}>{{ stadium['stadium_name'] }}</option>
+                {% endfor %}
+            </select><br><br>
+        </div>
+
         <div class="container">
             <div class="column">
                 <h2>Player 1</h2>
@@ -46,6 +104,12 @@
                     <option value="{{ launcher['launcher_name'] }}" {% if launcher['launcher_name'] == p1_launcher_selected %}selected{% endif %}>{{ launcher['launcher_name'] }}</option>
                     {% endfor %}
                 </select><br><br>
+                <div class="outcome-buttons">
+                    <button type="submit" name="finish_type" value="Survivor" name="winner_name" value="{{ player1_selected }}">Survivor</button>
+                    <button type="submit" name="finish_type" value="Burst" name="winner_name" value="{{ player1_selected }}">Burst</button>
+                    <button type="submit" name="finish_type" value="KO" name="winner_name" value="{{ player1_selected }}">KO</button>
+                    <button type="submit" name="finish_type" value="Extreme" name="winner_name" value="{{ player1_selected }}">Extreme</button>
+                </div>
             </div>
             <div class="column">
                 <h2>Player 2</h2>
@@ -72,43 +136,20 @@
                     <option value="{{ launcher['launcher_name'] }}" {% if launcher['launcher_name'] == p2_launcher_selected %}selected{% endif %}>{{ launcher['launcher_name'] }}</option>
                     {% endfor %}
                 </select><br><br>
+                <div class="outcome-buttons">
+                    <button type="submit" name="finish_type" value="Survivor" name="winner_name" value="{{ player2_selected }}">Survivor</button>
+                    <button type="submit" name="finish_type" value="Burst" name="winner_name" value="{{ player2_selected }}">Burst</button>
+                    <button type="submit" name="finish_type" value="KO" name="winner_name" value="{{ player2_selected }}">KO</button>
+                    <button type="submit" name="finish_type" value="Extreme" name="winner_name" value="{{ player2_selected }}">Extreme</button>
+                </div>
             </div>
         </div>
-
-        <label for="stadium_name">Stadium:</label><br> <!-—Added Stadium Select-->
-        <select id="stadium_name" name="stadium_name" required>
-            <option value="">Select Stadium</option>
-            {% for stadium in stadiums %}
-            <option value="{{ stadium['stadium_name'] }}" {% if stadium['stadium_name'] == stadium_selected %}selected{% endif %}>{{ stadium['stadium_name'] }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <label for="tournament_id">Tournament:</label><br>
-        <select id="tournament_id" name="tournament_id">
-            <option value="">Select Tournament</option>
-            {% for tournament in tournaments %}
-                <option value="{{ tournament['tournament_id'] }}" {% if tournament['tournament_id'] == tournament_selected %}selected{% endif %}>{{ tournament['tournament_name'] }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <label for="winner_name">Winner (Leave blank for Draw):</label><br>
-        <select id="winner_name" name="winner_name">
-            <option value="">Select Winner</option>
-            {% for player in players %}
-            <option value="{{ player['player_name'] }}" {% if player['player_name'] == winner_selected %}selected{% endif %}>{{ player['player_name'] }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <label for="finish_type">Finish Type:</label><br>
-        <select id="finish_type" name="finish_type" required>
-            <option value="Draw" {% if finish_selected == "Draw"%}selected{% endif %}>Draw</option>
-            <option value="Survivor" {% if finish_selected == "Survivor"%}selected{% endif %}>Survivor</option>
-            <option value="KO" {% if finish_selected == "KO"%}selected{% endif %}>KO</option>
-            <option value="Burst" {% if finish_selected == "Burst"%}selected{% endif %}>Burst</option>
-            <option value="Extreme" {% if finish_selected == "Extreme"%}selected{% endif %}>Extreme</option>
-        </select><br><br>
-
-        <input type="submit" value="Add Match">
+        <div class="draw-container">
+            <button type="submit" name="finish_type" value="Draw">Draw</button>
+        </div>
+        <div class="submit-container">
+            <input type="submit" value="Add Match">
+        </div>
     </form>
         <a href="{{ url_for('index') }}">Back to Home</a>
 </body>
