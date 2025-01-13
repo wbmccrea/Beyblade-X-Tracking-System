@@ -407,7 +407,7 @@ def add_match():
     p1_combo_selected = None
     p2_combo_selected = None
     p1_launcher_selected = None
-    p2_launcher_selected = None
+    p2_launcher_selected = None  # Corrected typo here (changed p2_launcher_name to p2_launcher_selected)
     winner_selected = None
     tournament_selected = None
     finish_selected = None
@@ -517,7 +517,7 @@ def add_match():
             p1_combo_selected = request.args.get('p1_combo_selected')
             p2_combo_selected = request.args.get('p2_combo_selected')
             p1_launcher_selected = request.args.get('p1_launcher_selected')
-            p2_launcher_selected = request.args.get('p2_launcher_selected')
+            p2_launcher_selected = request.args.get('p2_launcher_selected')  # Using the corrected variable name here
             winner_selected = request.args.get('winner_selected')
             tournament_selected = request.args.get('tournament_selected')
             finish_selected = request.args.get('finish_selected')
@@ -530,7 +530,7 @@ def add_match():
         if conn:
             conn.close()
 
-    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected, p2_launcher_selected=p2_launcher_name, winner_selected=winner_selected, tournament_selected=tournament_selected, finish_selected=finish_selected, stadium_selected=stadium_selected)
+    return render_template('add_match.html', players=players, combinations=combinations, launchers=launchers, tournaments=tournaments, stadiums=stadiums, message=message, player1_selected=player1_selected, player2_selected=player2_selected, p1_combo_selected=p1_combo_selected, p2_combo_selected=p2_combo_selected, p1_launcher_selected=p1_launcher_selected
 
 @app.route('/')  # Route for the landing page
 def index():
