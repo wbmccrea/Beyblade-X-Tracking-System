@@ -55,6 +55,9 @@
             font-size: 16px;
             border-radius: 5px;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -111,12 +114,6 @@
                     <option value="{{ launcher['launcher_name'] }}" {% if launcher['launcher_name'] == p1_launcher_selected %}selected{% endif %}>{{ launcher['launcher_name'] }}</option>
                     {% endfor %}
                 </select><br><br>
-                <div class="outcome-buttons">
-                    <button type="button" onclick="setWinner('{{ player1_selected }}', 'Survivor')">Survivor</button>
-                    <button type="button" onclick="setWinner('{{ player1_selected }}', 'Burst')">Burst</button>
-                    <button type="button" onclick="setWinner('{{ player1_selected }}', 'KO')">KO</button>
-                    <button type="button" onclick="setWinner('{{ player1_selected }}', 'Extreme')">Extreme</button>
-                </div>
             </div>
             <div class="column">
                 <h2>Player 2</h2>
@@ -143,27 +140,54 @@
                     <option value="{{ launcher['launcher_name'] }}" {% if launcher['launcher_name'] == p2_launcher_selected %}selected{% endif %}>{{ launcher['launcher_name'] }}</option>
                     {% endfor %}
                 </select><br><br>
-                <div class="outcome-buttons">
-                    <button type="button" onclick="setWinner('{{ player2_selected }}', 'Survivor')">Survivor</button>
-                    <button type="button" onclick="setWinner('{{ player2_selected }}', 'Burst')">Burst</button>
-                    <button type="button" onclick="setWinner('{{ player2_selected }}', 'KO')">KO</button>
-                    <button type="button" onclick="setWinner('{{ player2_selected }}', 'Extreme')">Extreme</button>
-                </div>
             </div>
+        </div>
+
+        <label for="finish_type">Finish Type:</label>
+        <select name="finish_type" id="finish_type" required>
+            <option value="">Select Finish Type</option>
+            <option value="KO">KO</option>
+            <option value="Survivor">Survivor</option>
+            <option value="Burst">Burst</option>
+            <option value="Extreme">Extreme</option>
+        </select>
+        <br>
+        <div id="winner-buttons" class="hidden">
+            <p>Select Winner:</p>
+            <button type="button" onclick="setWinner('{{ player1_selected }}')">{{ player1_selected }}</button>
+            <button type="button" onclick="setWinner('{{ player2_selected }}')">{{ player2_selected }}</button>
+            <input type="hidden" name="winner_id" id="winner_id" value="">
         </div>
         <div class="draw-container">
             <button type="submit" name="finish_type" value="Draw">Draw</button>
         </div>
-        <input type="hidden" name="winner_id" id="winner_id" value="">
-        <input type="hidden" name="finish_type" id="finish_type" value="">
+        <input type="submit" value="Add Match">
     </form>
     <a href="{{ url_for('index') }}">Back to Home</a>
-
     <script>
-        function setWinner(winnerName, finishType) {
-            document.getElementById("winner_id").value = winnerName;
-            document.getElementById("finish_type").value = finishType;
+        const player1Select = document.getElementById('player1_name');
+        const player2Select = document.getElementById('player2_name');
+                const finishTypeSelect = document.getElementById('finish_type');
+
+        const winnerButtons = document.getElementById('winner-buttons');
+
+        function setWinner(winnerName) {
+            document.getElementById('winner_id').value = winnerName;
         }
-    </script>
-</body>
+
+        function toggleWinnerButtons() {
+                if (player1Select.value && player2Select.value && player1Select.value !== player2Select.value && finishTypeSelect.value !== "") {
+                    winnerButtons.classList.remove('hidden');
+                } else {
+                    winnerButtons.classList.add('hidden');
+                    document.getElementById('winner_id').value = ""; // Clear winner if selections change
+                }
+            }
+
+            player1Select.addEventListener('change', toggleWinnerButtons);
+            player2Select.addEventListener('change', toggleWinnerButtons);
+            finishTypeSelect.addEventListener('change', toggleWinnerButtons);
+            toggleWinnerButtons(); // Call on page load
+        </script>
+    </body>
 </html>

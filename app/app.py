@@ -679,24 +679,24 @@ def add_match():
             stadium_name = request.form.get('stadium_name')
             tournament_name = request.form.get('tournament_name')
             finish_type = request.form.get('finish_type')
-            winner_name = request.form.get('winner_id') # This is the *key* change
+            winner_name = request.form.get('winner_id')
+            draw = False
 
             player1_id = get_id_by_name(cursor, "Players", player1_name, "player_id")
-            player2_id = get_id_by_name("Players", player2_name, "player_id")
+            player2_id = get_id_by_name(cursor, "Players", player2_name, "player_id")
             p1_combo_id = get_id_by_name("BeybladeCombinations", p1_combo_name, "combination_id")
             p2_combo_id = get_id_by_name("BeybladeCombinations", p2_combo_name, "combination_id")
             p1_launcher_id = get_id_by_name("LauncherTypes", p1_launcher_name, "launcher_id")
             p2_launcher_id = get_id_by_name("LauncherTypes", p2_launcher_name, "launcher_id")
             stadium_id = get_id_by_name("Stadiums", stadium_name, "stadium_id")
+
             tournament_id = None
             if tournament_name:
-                tournament_id = get_id_by_name("Tournaments", tournament_name, "tournament_id")
-            winner_id = None
-            draw = False
+                tournament_id = get_id_by_name(cursor, "Tournaments", tournament_name, "tournament_id")
 
+            winner_id = None
             if finish_type == "Draw":
                 draw = True
-                finish_type = "Draw" # Ensure finish_type is 'Draw'
             elif winner_name:
                 winner_id = get_id_by_name(cursor, "Players", winner_name, "player_id")
 
@@ -709,9 +709,6 @@ def add_match():
 
                 cursor.execute(sql, val)
                 conn.commit()
-
-                # Publish updated stats to MQTT after successful commit
-                # publish_stats()
 
                 message = "Match added successfully!"
                 player1_selected = player1_name
