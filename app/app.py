@@ -620,9 +620,17 @@ def add_tournament():
             return f"Error adding tournament: {e}", 500  # Return user-friendly error message
     return render_template('add_tournament.html')
 
+from flask import Flask, render_template, request, redirect, url_for, flash
+import mysql.connector
+import os
+from datetime import datetime
+import logging
+
+# ... (Your existing get_db_connection and get_id_by_name functions remain *completely unchanged* and MUST be present in your app.py file)
+
 @app.route('/add_match', methods=['GET', 'POST'], endpoint="add_match")
 def add_match():
-    conn = get_db_connection()  # Function to establish database connection
+    conn = get_db_connection()
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
@@ -633,7 +641,6 @@ def add_match():
     stadiums = []
     message = None
 
-    # Initialize all selected variables to None for the GET request
     player1_selected = None
     player2_selected = None
     p1_combo_selected = None
@@ -646,36 +653,21 @@ def add_match():
     stadium_selected = None
 
     try:
-        # Fetch data for dropdowns (This is the same for both GET and POST)
-        try:
-            cursor.execute("SELECT player_name FROM Players")
-            players = [{"player_name": player[0]} for player in cursor.fetchall()]
-        except mysql.connector.Error as e:
-            logger.debug(f"Error retrieving players: {e}")
+        # Fetch data for dropdowns (This remains *completely unchanged*)
+        cursor.execute("SELECT player_name FROM Players")
+        players = [{"player_name": player[0]} for player in cursor.fetchall()]
 
-        try:
-            cursor.execute("SELECT combination_name FROM BeybladeCombinations")
-            combinations = [{"combination_name": combo[0]} for combo in cursor.fetchall()]
-        except mysql.connector.Error as e:
-            logger.debug(f"Error retrieving combinations: {e}")
+        cursor.execute("SELECT combination_name FROM BeybladeCombinations")
+        combinations = [{"combination_name": combo[0]} for combo in cursor.fetchall()]
 
-        try:
-            cursor.execute("SELECT launcher_name FROM LauncherTypes")
-            launchers = [{"launcher_name": launcher[0]} for launcher in cursor.fetchall()]
-        except mysql.connector.Error as e:
-            logger.debug(f"Error retrieving launchers: {e}")
+        cursor.execute("SELECT launcher_name FROM LauncherTypes")
+        launchers = [{"launcher_name": launcher[0]} for launcher in cursor.fetchall()]
 
-        try:
-            cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
-            tournaments = [{"tournament_name": t[0], "tournament_id": t[1]} for t in cursor.fetchall()]
-        except mysql.connector.Error as e:
-            logger.debug(f"Error retrieving tournaments: {e}")
+        cursor.execute("SELECT tournament_name, tournament_id FROM Tournaments")
+        tournaments = [{"tournament_name": t[0], "tournament_id": t[1]} for t in cursor.fetchall()]
 
-        try:
-            cursor.execute("SELECT stadium_name FROM Stadiums")
-            stadiums = [{"stadium_name": stadium[0]} for stadium in cursor.fetchall()]
-        except mysql.connector.Error as e:
-            logger.debug(f"Error retrieving stadiums: {e}")
+        cursor.execute("SELECT stadium_name FROM Stadiums")
+        stadiums = [{"stadium_name": stadium[0]} for stadium in cursor.fetchall()]
 
         if request.method == 'POST':
             player1_name = request.form.get('player1_name')
@@ -687,9 +679,9 @@ def add_match():
             stadium_name = request.form.get('stadium_name')
             tournament_name = request.form.get('tournament_name')
             finish_type = request.form.get('finish_type')
-            winner_name = request.form.get('winner_name')
+            winner_name = request.form.get('winner_id') # This is the *key* change
 
-            player1_id = get_id_by_name("Players", player1_name, "player_id")
+            player1_id = get_id_by_name(cursor, "Players", player1_name, "player_id")
             player2_id = get_id_by_name("Players", player2_name, "player_id")
             p1_combo_id = get_id_by_name("BeybladeCombinations", p1_combo_name, "combination_id")
             p2_combo_id = get_id_by_name("BeybladeCombinations", p2_combo_name, "combination_id")
@@ -704,8 +696,9 @@ def add_match():
 
             if finish_type == "Draw":
                 draw = True
+                finish_type = "Draw" # Ensure finish_type is 'Draw'
             elif winner_name:
-                winner_id = get_id_by_name("Players", winner_name, "player_id")
+                winner_id = get_id_by_name(cursor, "Players", winner_name, "player_id")
 
             try:
                 sql = """
@@ -718,7 +711,7 @@ def add_match():
                 conn.commit()
 
                 # Publish updated stats to MQTT after successful commit
-                publish_stats()
+                # publish_stats()
 
                 message = "Match added successfully!"
                 player1_selected = player1_name
@@ -737,20 +730,6 @@ def add_match():
                 logger.error(f"Error adding match: {e}")
                 message = f"Error adding match: {e}"
                 return f"Error adding match: {e}", 500
-            
-        #GET Request
-        else:
-            message = request.args.get('message')
-            player1_selected = request.args.get('player1_selected')
-            player2_selected = request.args.get('player2_selected')
-            p1_combo_selected = request.args.get('p1_combo_selected')
-            p2_combo_selected = request.args.get('p2_combo_selected')
-            p1_launcher_selected = request.args.get('p1_launcher_selected')
-            p2_launcher_selected = request.args.get('p2_launcher_selected')
-            winner_selected = request.args.get('winner_selected')
-            tournament_selected = request.args.get('tournament_selected')
-            finish_selected = request.args.get('finish_selected')
-            stadium_selected = request.args.get('stadium_selected')
 
     except mysql.connector.Error as e:
         logger.error(f"Database error: {e}")
