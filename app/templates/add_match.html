@@ -65,6 +65,7 @@
     {% endif %}
 
     <form method="POST">
+        <input type="hidden" name="winner_name" id="winner_name" value="">
         <div class="stadium-container">
             <label for="stadium_name">Stadium:</label><br>
             <select id="stadium_name" name="stadium_name" required>
@@ -112,10 +113,10 @@
                     {% endfor %}
                 </select><br><br>
                 <div class="outcome-buttons">
-                    <button type="submit" name="finish_type" value="Survivor" name="winner_name" value="{{ player1_selected }}">Survivor</button>
-                    <button type="submit" name="finish_type" value="Burst" name="winner_name" value="{{ player1_selected }}">Burst</button>
-                    <button type="submit" name="finish_type" value="KO" name="winner_name" value="{{ player1_selected }}">KO</button>
-                    <button type="submit" name="finish_type" value="Extreme" name="winner_name" value="{{ player1_selected }}">Extreme</button>
+                    <button type="submit" name="finish_type" value="KO" onclick="setWinner('player1_name')">KO</button>
+                    <button type="submit" name="finish_type" value="Survivor" onclick="setWinner('player1_name')">Survivor</button>
+                    <button type="submit" name="finish_type" value="Burst" onclick="setWinner('player1_name')">Burst</button>
+                    <button type="submit" name="finish_type" value="Extreme" onclick="setWinner('player1_name')">Extreme</button>
                 </div>
             </div>
             <div class="column">
@@ -144,17 +145,27 @@
                     {% endfor %}
                 </select><br><br>
                 <div class="outcome-buttons">
-                    <button type="submit" name="finish_type" value="Survivor" name="winner_name" value="{{ player2_selected }}">Survivor</button>
-                    <button type="submit" name="finish_type" value="Burst" name="winner_name" value="{{ player2_selected }}">Burst</button>
-                    <button type="submit" name="finish_type" value="KO" name="winner_name" value="{{ player2_selected }}">KO</button>
-                    <button type="submit" name="finish_type" value="Extreme" name="winner_name" value="{{ player2_selected }}">Extreme</button>
+                    <button type="submit" name="finish_type" value="KO" onclick="setWinner('player2_name')">KO</button>
+                    <button type="submit" name="finish_type" value="Survivor" onclick="setWinner('player2_name')">Survivor</button>
+                    <button type="submit" name="finish_type" value="Burst" onclick="setWinner('player2_name')">Burst</button>
+                    <button type="submit" name="finish_type" value="Extreme" onclick="setWinner('player2_name')">Extreme</button>
                 </div>
             </div>
         </div>
         <div class="draw-container">
-            <button type="submit" name="finish_type" value="Draw">Draw</button>
+            <button type="submit" name="finish_type" value="Draw" onclick="setWinner('')">Draw</button>
         </div>
     </form>
         <a href="{{ url_for('index') }}">Back to Home</a>
+        <script>
+            function setWinner(selectId) {
+                if (selectId) { // Check if selectId is provided (not for Draw)
+                    var selectElement = document.getElementById(selectId);
+                    document.getElementById("winner_name").value = selectElement.value;
+                } else {
+                    document.getElementById("winner_name").value = ""; // Draw case
+                }
+            }
+        </script>
 </body>
 </html>

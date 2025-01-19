@@ -20,17 +20,21 @@
         <label for="location">Location:</label><br>
         <input type="text" id="location" name="location"><br><br>
 
-        <label for="dimensions">Dimensions (D X W X H):</label><br>
-        <input type="text" id="dimensions" name="dimensions"><br><br>
-
         <label for="material">Material:</label><br>
         <input type="text" id="material" name="material"><br><br>
 
         <label for="notes">Notes:</label><br>
         <textarea id="notes" name="notes"></textarea><br><br>
 
+        <label for="stadium_class_id">Stadium Class:</label><br>
+        <select name="stadium_class_id" id="stadium_class_id" required>
+            {% for stadium_class in stadium_classes %}
+            <option value="{{ stadium_class[0] }}">{{ stadium_class[1] }}</option>
+            {% endfor %}
+        </select><br><br>
+
         <input type="submit" value="Add Stadium">
     </form>
-        <a href="{{ url_for('index') }}">Back to Home</a>
+    <a href="{{ url_for('index') }}">Back to Home</a>
 </body>
 </html>

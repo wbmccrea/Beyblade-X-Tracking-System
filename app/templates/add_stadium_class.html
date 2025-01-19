@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Stadium Class</title>
+</head>
+<body>
+    <h1>Add Stadium Class</h1>
+
+    {% if message %}
+        <p>{{ message }}</p>
+    {% endif %}
+
+    <form method="POST">
+        <label for="stadium_class_name">Stadium Class Name:</label><br>
+        <input type="text" name="stadium_class_name" id="stadium_class_name" required><br><br>
+
+        <label for="description">Description:</label><br>
+        <textarea name="description" id="description"></textarea><br><br>
+
+        <label for="depth">Depth:</label><br>
+        <input type="number" name="depth" id="depth" step="0.01" required><br><br>
+
+        <label for="width">Width:</label><br>
+        <input type="number" name="width" id="width" step="0.01" required><br><br>
+
+        <label for="height">Height:</label><br>
+        <input type="number" name="height" id="height" step="0.01" required><br><br>
+
+        <input type="submit" value="Add Stadium Class">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>

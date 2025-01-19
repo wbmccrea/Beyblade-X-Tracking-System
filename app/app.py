@@ -371,6 +371,11 @@ def get_id_by_name(table, name, id_column):
         if conn:
             conn.close()
 
+def get_all_from_table(cursor, table_name):
+    """Retrieves all rows from a specified table."""
+    cursor.execute(f"SELECT * FROM {table_name}")
+    return cursor.fetchall()
+
 # Web routes for adding components and combinations
 
 @app.route('/add_blade', methods=['GET', 'POST'])
@@ -1884,53 +1889,68 @@ def beyblade_stats():
         if conn:
             conn.close()
 
-from flask import Flask, render_template, request, redirect, url_for
-import mysql.connector
-from datetime import datetime
-from urllib.parse import unquote
-import logging
+@app.route('/add_stadium_class', methods=['GET', 'POST'], endpoint="add_stadium_class")
+def add_stadium_class():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if request.method == 'POST':
+        stadium_class_name = request.form.get('stadium_class_name')
+        description = request.form.get('description')
+        depth = request.form.get('depth')
+        width = request.form.get('width')
+        height = request.form.get('height')
 
-# ... (other imports and app setup)
+        try:
+            sql = "INSERT INTO StadiumClasses (stadium_class_name, description, depth, width, height) VALUES (%s, %s, %s, %s, %s)"
+            val = (stadium_class_name, description, depth, width, height)
+            cursor.execute(sql, val)
+            conn.commit()
+            message = "Stadium Class added successfully!"
+        except mysql.connector.Error as e:
+            conn.rollback()
+            message = f"Error adding Stadium Class: {e}"
+        return render_template('add_stadium_class.html', message=message)
+    return render_template('add_stadium_class.html')
 
-@app.route('/add_stadium', methods=['GET', 'POST'])
+@app.route('/add_stadium', methods=['GET', 'POST'], endpoint="add_stadium")
 def add_stadium():
     conn = get_db_connection()
     if conn is None:
         return "Database connection error", 500
     cursor = conn.cursor()
     message = None
+    stadium_classes = get_all_from_table(cursor, "StadiumClasses")
 
     if request.method == 'POST':
         stadium_name = request.form['stadium_name']
-        description = request.form.get('description', None) # Use .get to handle optional fields
+        description = request.form.get('description', None)
         location = request.form.get('location', None)
-        dimensions = request.form.get('dimensions', None)
         material = request.form.get('material', None)
         notes = request.form.get('notes', None)
+        stadium_class_id = request.form.get('stadium_class_id') # Get stadium class ID
 
         try:
             sql = """
-                INSERT INTO Stadiums (stadium_name, description, location, dimensions, material, notes)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO Stadiums (stadium_name, description, location, material, notes, stadium_class_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            val = (stadium_name, description, location, dimensions, material, notes)
+            val = (stadium_name, description, location, material, notes, stadium_class_id) #Include stadium_class_id
             cursor.execute(sql, val)
             conn.commit()
             message = "Stadium added successfully!"
         except mysql.connector.Error as e:
             conn.rollback()
             logger.error(f"Error adding stadium: {e}")
-            message = f"Error adding stadium: {e}" # Display the error to the user for debugging
+            message = f"Error adding stadium: {e}"
             return f"Error adding stadium: {e}", 500
         finally:
             conn.close()
-        return redirect(url_for('add_stadium', message=message))
+        return redirect(url_for('add_stadium', message=message)) # Redirect after successful POST
+
+    # Handle GET request
     elif request.method == 'GET':
         message = request.args.get('message')
-        if message:
-            return render_template('add_stadium.html', message=message)
-        else:
-            return render_template('add_stadium.html')
+        return render_template('add_stadium.html', message=message, stadium_classes=stadium_classes)
 
 publish_stats_at_startup()
 
