@@ -344,7 +344,7 @@ def get_id_by_name(table, name, id_column):
             name_column = "player_name"
         elif table == "BeybladeCombinations":
             name_column = "combination_name"
-        elif table == "LauncherTypes":
+        elif table == "Launchers":
             name_column = "launcher_name"
         elif table == "Stadiums":  # Add this case for Stadiums
             name_column = "stadium_name"  # Set name_column to "stadium_name"
@@ -562,7 +562,7 @@ def add_launcher():
             return "Database connection error", 500
         cursor = conn.cursor()
         try:
-            cursor.execute("INSERT INTO LauncherTypes (launcher_name) VALUES (%s)", (data['launcher_name'],))
+            cursor.execute("INSERT INTO Launchers (launcher_name) VALUES (%s)", (data['launcher_name'],))
             conn.commit()
             conn.close()
             return "Launcher added successfully!"
@@ -665,7 +665,7 @@ def add_match():
             logger.debug(f"Error retrieving combinations: {e}")
 
         try:
-            cursor.execute("SELECT launcher_name FROM LauncherTypes")
+            cursor.execute("SELECT launcher_name FROM Launchers")
             launchers = [{"launcher_name": launcher[0]} for launcher in cursor.fetchall()]
         except mysql.connector.Error as e:
             logger.debug(f"Error retrieving launchers: {e}")
@@ -698,8 +698,8 @@ def add_match():
             player2_id = get_id_by_name("Players", player2_name, "player_id")
             p1_combo_id = get_id_by_name("BeybladeCombinations", p1_combo_name, "combination_id")
             p2_combo_id = get_id_by_name("BeybladeCombinations", p2_combo_name, "combination_id")
-            p1_launcher_id = get_id_by_name("LauncherTypes", p1_launcher_name, "launcher_id")
-            p2_launcher_id = get_id_by_name("LauncherTypes", p2_launcher_name, "launcher_id")
+            p1_launcher_id = get_id_by_name("Launchers", p1_launcher_name, "launcher_id")
+            p2_launcher_id = get_id_by_name("Launchers", p2_launcher_name, "launcher_id")
             stadium_id = get_id_by_name("Stadiums", stadium_name, "stadium_id")
             tournament_id = None
             if tournament_name:
@@ -810,8 +810,8 @@ def tournament_stats():
                 LEFT JOIN Players p2 ON m.player2_id = p2.player_id
                 LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
                 LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
-                LEFT JOIN LauncherTypes lt1 on m.player1_launcher_id = lt1.launcher_id
-                LEFT JOIN LauncherTypes lt2 on m.player2_launcher_id = lt2.launcher_id
+                LEFT JOIN Launchers lt1 on m.player1_launcher_id = lt1.launcher_id
+                LEFT JOIN Launchers lt2 on m.player2_launcher_id = lt2.launcher_id
                 LEFT JOIN Players w ON m.winner_id = w.player_id
                 {where_clause}
                 ORDER BY t.start_date DESC
@@ -989,8 +989,8 @@ def player_stats():
                     LEFT JOIN Players p2 ON m.player2_id = p2.player_id
                     LEFT JOIN BeybladeCombinations bc1 ON m.player1_combination_id = bc1.combination_id
                     LEFT JOIN BeybladeCombinations bc2 ON m.player2_combination_id = bc2.combination_id
-                    LEFT JOIN LauncherTypes lt1 ON m.player1_launcher_id = lt1.launcher_id
-                    LEFT JOIN LauncherTypes lt2 ON m.player2_launcher_id = lt2.launcher_id
+                    LEFT JOIN Launchers lt1 ON m.player1_launcher_id = lt1.launcher_id
+                    LEFT JOIN Launchers lt2 ON m.player2_launcher_id = lt2.launcher_id
                     LEFT JOIN Players w ON m.winner_id = w.player_id
                     LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
                     WHERE (m.player1_id = {selected_player} OR m.player2_id = {selected_player})
