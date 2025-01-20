@@ -1,0 +1,71 @@
+Here's the updated list with those additions and some other potential statistics based on the data:
+
+Updated Statistics List:
+
+1. General Match Statistics:
+
+Total Matches Played
+Matches by Tournament
+2. Player Statistics:
+
+Matches Played
+Wins
+Losses
+Draws (Ties)
+Win Percentage
+Non-Loss Percentage (Win + Draw Percentage)
+Average Finish Type
+Win Streak/Loss Streak
+Points Standings: Total points accumulated by each player (this will require defining a point system).
+3. Combination Statistics:
+
+Matches Played
+Wins
+Losses
+Draws
+Win Percentage
+Non-Loss Percentage
+Average Finish Type
+Most Common Opponent Combination
+Best Matchups (Combinations)
+Worst Matchups (Combinations)
+Points Standings: Total points accumulated by each combination.
+4. Beyblade Part Statistics (Blade, Ratchet, Bit):
+
+Usage Frequency
+Win Percentage (with caveats mentioned previously)
+Most Common Combinations
+Points Standings: Total points accumulated by combinations using each part.
+5. Stadium Statistics:
+
+Matches Played in Stadium
+Win Percentage by Stadium
+Combination Performance by Stadium
+Player Performance by Stadium
+6. Launcher Statistics:
+
+Usage Frequency
+Win Percentage (for each Launcher/Launcher Class)
+Combination Performance by Launcher Class
+Player Performance by Launcher Class
+7. Matchups (Player vs. Player, Combination vs. Combination):
+
+Head-to-Head Records
+Win Percentage in Head-to-Head Matchups
+Additional Statistics Worth Considering (Based on the Data):
+
+Finish Type Distribution: The percentage of each finish type (Burst, Ring Out, Over, Spin) across all matches, for each player, for each combination, and perhaps even for each stadium. This can reveal interesting trends.
+Average Match Length (If Time Data is Available): If you start recording match duration, you could calculate the average match length overall, for different combinations, or in different stadiums. This is not currently available in the sample data.
+Most Common Matchups: The most frequently occurring matchups between players or combinations. This can highlight popular pairings or common strategies.
+Tournament Standings: If you want to track standings within specific tournaments, you can calculate points and rankings based on match results within each tournament.
+Elo Rating (Advanced): If you want a more sophisticated ranking system that takes into account the relative skill of the opponents, you could implement an Elo rating system. This is a more complex undertaking but can provide more accurate rankings.
+Points System:
+
+For points standings, you'll need to define a point system. Here's a common example:
+
+Win: 3 points
+Draw: 1 point
+Loss: 0 points
+You can adjust these values based on your preferences.
+
+With these additions and considerations, we have a very comprehensive list of statistics to work with. I believe this covers all the important aspects and provides a good foundation for a robust statistics system.

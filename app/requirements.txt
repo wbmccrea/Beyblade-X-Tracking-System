@@ -1,4 +1,5 @@
 Flask
+Flask-SQLAlchemy
 mysql-connector-python
 python-dotenv
 paho-mqtt
