@@ -58,7 +58,7 @@ connected_flag = False
 def on_connect(client, userdata, flags, rc):  # Move to global scope
     global connected_flag
     if rc == 0:
-        logger.info("Connected to MQTT Broker!")
+        #logger.info("Connected to MQTT Broker!")
         connected_flag = True
     else:
         logger.error(f"Failed to connect to MQTT, return code {rc}")
@@ -95,7 +95,7 @@ def mqtt_loop():
 
 def publish_stats():
     global connected_flag
-    logger.info("publish_stats() called")
+    #logger.info("publish_stats() called")
     try:
         conn = get_db_connection() #Your function to get the db connection
         if conn is None:
@@ -107,7 +107,7 @@ def publish_stats():
             try:
                 cursor_player.execute("SELECT player_id, player_name FROM Players")
                 players = cursor_player.fetchall()
-                logger.info(f"Players retrieved: {players}")
+                #logger.info(f"Players retrieved: {players}")
 
                 for player_id, player_name in players:
                     if not player_id:
@@ -130,14 +130,14 @@ def publish_stats():
                         WHERE player1_id = %(player_id)s OR player2_id = %(player_id)s;
                     """
                     parameters = {'player_id': player_id}
-                    logger.info(f"Player ID: {player_id}")
-                    logger.info(f"Player Name: {player_name}")
-                    logger.info(f"SQL: {sql}")
-                    logger.info(f"Parameters: {parameters}")
+                    #logger.info(f"Player ID: {player_id}")
+                    #logger.info(f"Player Name: {player_name}")
+                    #logger.info(f"SQL: {sql}")
+                    #logger.info(f"Parameters: {parameters}")
 
                     cursor_player.execute(sql, parameters)
                     result = cursor_player.fetchone()
-                    logger.info(f"Result: {result}")
+                    #logger.info(f"Result: {result}")
 
                     if result:
                         wins, losses, draws, points = result
@@ -185,7 +185,7 @@ def publish_stats():
             try:
                 cursor_combination.execute("SELECT combination_id, combination_name FROM BeybladeCombinations")
                 combinations = cursor_combination.fetchall()
-                logger.info(f"Combinations retrieved: {combinations}")
+                #logger.info(f"Combinations retrieved: {combinations}")
 
                 for combination_id, combination_name in combinations:
                     if not combination_id:
@@ -212,14 +212,14 @@ def publish_stats():
                         WHERE bc.combination_id = %(combination_id)s
                     """
                     parameters = {'combination_id': combination_id}
-                    logger.info(f"Combination ID: {combination_id}")
-                    logger.info(f"Combination Name: {combination_name}")
-                    logger.info(f"SQL: {sql}")
-                    logger.info(f"Parameters: {parameters}")
+                    #logger.info(f"Combination ID: {combination_id}")
+                    #logger.info(f"Combination Name: {combination_name}")
+                    #logger.info(f"SQL: {sql}")
+                    #logger.info(f"Parameters: {parameters}")
 
                     cursor_combination.execute(sql, parameters)
                     result = cursor_combination.fetchone()
-                    logger.info(f"Result: {result}")
+                    #logger.info(f"Result: {result}")
 
                     if result:
                         matches_played, wins, points = result
@@ -269,17 +269,17 @@ def publish_stats():
             logger.error("MQTT client not connected, cannot publish stats")
 
         conn.close()
-        logger.info("Stats published to MQTT (if successful)")
+        #logger.info("Stats published to MQTT (if successful)")
 
     except Exception as e:
         logger.error(f"Error publishing stats to MQTT: {e}")
 
 def publish_mqtt_message(client, stat_type, json_data):
     topic = MQTT_TOPIC_PREFIX + stat_type
-    logger.info(f"Publishing to topic: {topic}")
+    #logger.info(f"Publishing to topic: {topic}")
     ret = client.publish(topic, json_data)
     if ret[0] == 0:
-        logger.info(f"Publish successful for {stat_type}")
+        #logger.info(f"Publish successful for {stat_type}")
     else:
         logger.error(f"Publish failed for {stat_type}: {ret}")
 
@@ -304,7 +304,7 @@ def publish_discovery_config(client, player_stats, combination_stats):
 
                 discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/sensor/{MQTT_TOPIC_PREFIX.replace('/', '_')}{stat_type.replace('/', '_')}/{name}_{stat_name}/config"
                 client.publish(discovery_topic, json.dumps(config), retain=True)
-                logger.info(f"Published discovery config to {discovery_topic}")
+                #logger.info(f"Published discovery config to {discovery_topic}")
 
 @app.before_request
 def before_request():
@@ -326,7 +326,7 @@ else:
     logger.error("Failed to establish initial MQTT connection")
 
 def publish_stats_at_startup():
-    logger.info("Publishing stats at startup")
+    #logger.info("Publishing stats at startup")
     if client:  # Check if MQTT client is connected
         publish_stats()
 
@@ -355,7 +355,7 @@ def get_id_by_name(table, name, id_column):
             return None
 
         query = f"SELECT {id_column} FROM {table} WHERE LOWER({name_column}) = LOWER(%s)" # Use name_column
-        logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
+        #logger.info(f"get_id_by_name: Executing query: {query!r} with parameter: {name!r}")
         cursor.execute(query, (name,))
         result = cursor.fetchone()
         if result:
@@ -1711,7 +1711,7 @@ def publish_stats_to_mqtt(client):
                     player_points[player] = str(points)  # Convert Decimal to string
 
             client.publish(base_topic + "name", player_name, retain=True)
-            logger.info(f"player_points data: {player_points}")  # Print the data for inspection
+            #logger.info(f"player_points data: {player_points}")  # Print the data for inspection
             player_points_json = json.dumps(player_points)
             client.publish(base_topic + "points", player_points_json, retain=True)
             client.publish(base_topic + "points", player_points, retain=True)
