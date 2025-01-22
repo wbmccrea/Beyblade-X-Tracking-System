@@ -168,14 +168,14 @@ def publish_stats():
         recent_matches = []
         with conn.cursor() as cursor_matches:
             try:
-                cursor_matches.execute("SELECT * FROM Matches ORDER BY match_time DESC LIMIT 5")
+                cursor_matches.execute("SELECT * FROM Matches ORDER BY end_time DESC LIMIT 5")
                 matches = cursor_matches.fetchall()
                 column_names = [desc[0] for desc in cursor_matches.description]
 
                 for match in matches:
                     match_dict = dict(zip(column_names, match))
-                    if "match_time" in match_dict and match_dict["match_time"] is not None:
-                        match_dict["match_time"] = match_dict["match_time"].isoformat()
+                    if "end_time" in match_dict and match_dict["end_time"] is not None:
+                        match_dict["end_time"] = match_dict["end_time"].isoformat()
                     recent_matches.append(match_dict)
             except Exception as e:
                 logger.error(f"Recent matches error: {e}")
@@ -714,7 +714,7 @@ def add_match():
 
             try:
                 sql = """
-                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, match_time, draw, stadium_id)
+                    INSERT INTO Matches (tournament_id, player1_id, player2_id, player1_combination_id, player2_combination_id, player1_launcher_id, player2_launcher_id, winner_id, finish_type, end_time, draw, stadium_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 val = (tournament_id, player1_id, player2_id, p1_combo_id, p2_combo_id, p1_launcher_id, p2_launcher_id, winner_id, finish_type, datetime.now(), draw, stadium_id)
@@ -803,7 +803,7 @@ def tournament_stats():
                        p1.player_name AS player1_name, p2.player_name AS player2_name,
                        bc1.combination_name AS player1_combination, bc2.combination_name AS player2_combination,
                         lt1.launcher_name as player1_launcher, lt2.launcher_name as player2_launcher,
-                       m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time
+                       m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.end_time
                 FROM Tournaments t
                 LEFT JOIN Matches m ON t.tournament_id = m.tournament_id
                 LEFT JOIN Players p1 ON m.player1_id = p1.player_id
@@ -824,7 +824,7 @@ def tournament_stats():
         # Process Tournament and Match Data
         tournaments_data = {}
         for row in results:
-            tournament_name, start_date, end_date, match_id, player1_name, player2_name, player1_combination, player2_combination, player1_launcher, player2_launcher, finish_type, winner_name, match_time = row
+            tournament_name, start_date, end_date, match_id, player1_name, player2_name, player1_combination, player2_combination, player1_launcher, player2_launcher, finish_type, winner_name, end_time = row
             if tournament_name not in tournaments_data:
                 tournaments_data[tournament_name] = {
                     "start_date": start_date,
@@ -842,7 +842,7 @@ def tournament_stats():
                     "player2_launcher":player2_launcher,
                     "finish_type": finish_type,
                     "winner": winner_name,
-                    "match_time": match_time
+                    "end_time": end_time
                 })
 
         tournaments = [] #reset the list to only include the selected tournament data
@@ -982,7 +982,7 @@ def player_stats():
                            p.player_name as player1_name, p2.player_name as player2_name,
                            bc1.combination_name as player1_combination_name, bc2.combination_name as player2_combination_name,
                            lt1.launcher_name as player1_launcher, lt2.launcher_name as player2_launcher,
-                           m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
+                           m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.end_time,
                            t.tournament_name
                     FROM Matches m
                     LEFT JOIN Players p ON m.player1_id = p.player_id
@@ -995,7 +995,7 @@ def player_stats():
                     LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
                     WHERE (m.player1_id = {selected_player} OR m.player2_id = {selected_player})
                     AND m.player1_id != m.player2_id
-                    ORDER BY m.match_time DESC
+                    ORDER BY m.end_time DESC
                 """)
                 results = cursor.fetchall()
             except mysql.connector.Error as e:
@@ -1019,7 +1019,7 @@ def player_stats():
                     "opponent": opponent_name,
                     "finish_type": finish,
                     "winner": winner,
-                    "match_time": time,
+                    "end_time": time,
                     "tournament_name": tournament,
                     "player1": p1_name,
                     "player2": p2_name,
@@ -1168,7 +1168,7 @@ def combinations_stats():
                     SELECT m.player1_id, m.player2_id,
                            p.player_name as player1_name, p2.player_name as player2_name,
                            bc1.combination_name as player1_combination, bc2.combination_name as player2_combination,
-                           m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.match_time,
+                           m.finish_type, COALESCE(w.player_name, 'Draw') AS winner_name, m.end_time,
                            t.tournament_name
                     FROM Matches m
                     LEFT JOIN Players p ON m.player1_id = p.player_id
@@ -1178,7 +1178,7 @@ def combinations_stats():
                     LEFT JOIN Players w ON m.winner_id = w.player_id
                     LEFT JOIN Tournaments t ON m.tournament_id = t.tournament_id
                     WHERE (m.player1_combination_id = {selected_combination} OR m.player2_combination_id = {selected_combination})
-                    ORDER BY m.match_time DESC
+                    ORDER BY m.end_time DESC
                 """)
                 results = cursor.fetchall()
             except mysql.connector.Error as e:
@@ -1201,7 +1201,7 @@ def combinations_stats():
                     "player2_combination": p2_comb,
                     "finish_type": finish,
                     "winner": winner,
-                    "match_time": time,
+                    "end_time": time,
                     "tournament_name": tournament
                 })
 
