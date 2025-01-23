@@ -842,7 +842,7 @@ def tournament_stats():
                     "player2_launcher":player2_launcher,
                     "finish_type": finish_type,
                     "winner": winner_name,
-                    "end_time": end_time
+                    "match_time": end_time
                 })
 
         tournaments = [] #reset the list to only include the selected tournament data
