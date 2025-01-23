@@ -1,71 +1,149 @@
-Here's the updated list with those additions and some other potential statistics based on the data:
+I. General Match Statistics:
 
-Updated Statistics List:
 
-1. General Match Statistics:
 
 Total Matches Played
-Matches by Tournament
-2. Player Statistics:
+
+Matches by Tournament (Number of matches in each tournament)
+
+II. Player Statistics:
+
+
 
 Matches Played
-Wins
-Losses
-Draws (Ties)
-Win Percentage
-Non-Loss Percentage (Win + Draw Percentage)
-Average Finish Type
-Win Streak/Loss Streak
-Points Standings: Total points accumulated by each player (this will require defining a point system).
-3. Combination Statistics:
 
-Matches Played
 Wins
+
 Losses
+
 Draws
+
 Win Percentage
+
+Non-Loss Percentage (Win + Draw Percentage)
+
+Most Common Winning Finish Type
+
+Win Streak/Loss Streak (Current and longest streaks)
+
+Total Points (using the defined points system)
+
+Average Points per Match
+
+ELO Rating
+
+III. Combination Statistics:
+
+
+
+Matches Played
+
+Wins
+
+Losses
+
+Draws
+
+Win Percentage
+
 Non-Loss Percentage
-Average Finish Type
+
+Most Common Winning Finish Type
+
 Most Common Opponent Combination
-Best Matchups (Combinations)
-Worst Matchups (Combinations)
-Points Standings: Total points accumulated by each combination.
-4. Beyblade Part Statistics (Blade, Ratchet, Bit):
+
+Best Matchups (Combinations with the highest win rate against this combination)
+
+Worst Matchups (Combinations with the lowest win rate against this combination)
+
+Total Points (using the defined points system)
+
+Average Points per Match
+
+Burst Rate (Percentage of matches won by Burst Finish)
+
+Most Common Loss Type
+
+ELO Rating
+
+IV. Beyblade Part Statistics (Blade, Ratchet, Bit):
+
+
+
+Usage Frequency (Number of times each part is used in combinations)
+
+Win Percentage (of combinations using this part)
+
+Most Common Combinations (that include this part)
+
+Total Points (accumulated by combinations using this part)
+
+Average Points per Match (accumulated by combinations using this part)
+
+V. Stadium Statistics:
+
+
+
+Stadium Instance Statistics:
+
+Matches Played in Stadium (for each individual Stadium)
+
+Win Percentage by Stadium (for players and combinations, for each individual Stadium)
+
+Most Common Win Type by Stadium (for each individual Stadium)
+
+Most Common Matchups in Stadiums (for each individual Stadium)
+
+Stadium Class Statistics:
+
+Matches Played in Stadium Class (across all Stadiums of this class)
+
+Win Percentage by Stadium Class (for players and combinations, across all Stadiums of this class)
+
+Most Common Win Type by Stadium Class (across all Stadiums of this class)
+
+Most Common Matchups in Stadium Class (across all Stadiums of this class)
+
+VI. Launcher Statistics:
+
+
 
 Usage Frequency
-Win Percentage (with caveats mentioned previously)
-Most Common Combinations
-Points Standings: Total points accumulated by combinations using each part.
-5. Stadium Statistics:
 
-Matches Played in Stadium
-Win Percentage by Stadium
-Combination Performance by Stadium
-Player Performance by Stadium
-6. Launcher Statistics:
-
-Usage Frequency
 Win Percentage (for each Launcher/Launcher Class)
-Combination Performance by Launcher Class
-Player Performance by Launcher Class
-7. Matchups (Player vs. Player, Combination vs. Combination):
 
-Head-to-Head Records
+Most Common Win Type by Launcher Class
+
+VII. Matchups (Player vs. Player, Combination vs. Combination):
+
+
+
+Head-to-Head Records (Wins, Losses, Draws)
+
 Win Percentage in Head-to-Head Matchups
-Additional Statistics Worth Considering (Based on the Data):
 
-Finish Type Distribution: The percentage of each finish type (Burst, Ring Out, Over, Spin) across all matches, for each player, for each combination, and perhaps even for each stadium. This can reveal interesting trends.
-Average Match Length (If Time Data is Available): If you start recording match duration, you could calculate the average match length overall, for different combinations, or in different stadiums. This is not currently available in the sample data.
-Most Common Matchups: The most frequently occurring matchups between players or combinations. This can highlight popular pairings or common strategies.
-Tournament Standings: If you want to track standings within specific tournaments, you can calculate points and rankings based on match results within each tournament.
-Elo Rating (Advanced): If you want a more sophisticated ranking system that takes into account the relative skill of the opponents, you could implement an Elo rating system. This is a more complex undertaking but can provide more accurate rankings.
+Non-Loss Percentage in Head-to-Head Matchups
+
+VIII. Additional Statistics:
+
+
+
+Finish Type Distribution (for players, combinations, and stadiums)
+
+Average Match Length (once start_time is consistently recorded)
+
+Most Common Matchups (between players and combinations)
+
+Tournament Standings (for each tournament)
+
+
 Points System:
 
-For points standings, you'll need to define a point system. Here's a common example:
-
-Win: 3 points
-Draw: 1 point
+Win: 1 points
+Draw: 0 point
 Loss: 0 points
-You can adjust these values based on your preferences.
-
-With these additions and considerations, we have a very comprehensive list of statistics to work with. I believe this covers all the important aspects and provides a good foundation for a robust statistics system.
+Plus a modifier based on finish type:
+Survivor: +0 points
+Burst: +1 point
+KO: +1 point
+Extreme: +2 points

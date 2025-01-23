@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, CheckConstraint, Boolean, TIMESTAMP
 from sqlalchemy.orm import relationship
-from base import Base
+from sqlalchemy.ext.declarative import declarative_base
+#from base import Base
+
+Base = declarative_base()
 
 class Player(Base):
     __tablename__ = "Players"
