@@ -279,7 +279,7 @@ def publish_mqtt_message(client, stat_type, json_data):
     #logger.info(f"Publishing to topic: {topic}")
     ret = client.publish(topic, json_data)
     if ret[0] == 0:
-        #logger.info(f"Publish successful for {stat_type}")
+        logger.info(f"Publish successful for {stat_type}")
     else:
         logger.error(f"Publish failed for {stat_type}: {ret}")
 
