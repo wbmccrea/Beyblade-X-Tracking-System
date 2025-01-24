@@ -1,0 +1,43 @@
+Players:
+
+GET /api/players: Returns a list of all players.
+GET /api/player/<int:player_id>: Returns detailed statistics for a specific player.
+Combinations:
+
+GET /api/combinations: Returns a list of all combinations.
+GET /api/combination/<int:combination_id>: Returns detailed statistics for a specific combination.
+Tournaments:
+
+GET /api/tournaments: Returns a list of all tournaments.
+GET /api/tournament/<int:tournament_id>: Returns detailed information about a specific tournament, including its type.
+GET /api/tournament/<int:tournament_id>/standings: Returns tournament standings for a specific tournament. The type of standings (player or combination) will be determined based on the tournament's type.
+Stadiums:
+
+GET /api/stadiums: Returns a list of all stadiums.
+GET /api/stadium/<int:stadium_id>/matchups/<string:participant_type>: Returns common matchups in a stadium.
+GET /api/stadium/<int:stadium_id>/finish_type_distribution: Returns the distribution of finish types in a stadium.
+Stadium Classes:
+
+GET /api/stadium_classes: Returns a list of all stadium classes.
+GET /api/stadium_class/<int:stadium_class_id>/matchups/<string:participant_type>: Returns common matchups in a stadium class.
+GET /api/stadium_class/<int:stadium_class_id>/finish_type_distribution: Returns the distribution of finish types in a stadium class.
+Launchers:
+
+GET /api/launchers: Returns a list of all launchers.
+GET /api/launcher/<int:launcher_id>: Returns the usage frequency and win percentage of a specific launcher.
+Launcher Classes:
+
+GET /api/launcher_classes: Returns a list of all launcher classes.
+GET /api/launcher_class/<int:launcher_class_id>/finish_type_distribution: Returns the most common win type for a given launcher class.
+Matches:
+
+GET /api/match/<int:match_id>: Returns data for a specific match, including match length.
+GET /api/tournament/<int:tournament_id>/matches: Returns all matches for a given tournament.
+GET /api/tournament/<int:tournament_id>/average_match_length: Returns the average match length for a given tournament.
+Matchups (Player vs. Player and Combination vs. Combination):
+
+GET /api/matchups/<string:participant_type>: Returns the most common matchups between players or combinations.
+GET /api/player/<int:player1_id>/matchup/<int:player2_id>: Returns head-to-head statistics between two players.
+Finish Type Distributions:
+
+GET /api/finish_type_distribution/<string:participant_type>/<int:participant_id>: Returns the distribution of finish types for a player or combination.
