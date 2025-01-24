@@ -11,6 +11,9 @@ Tournaments:
 GET /api/tournaments: Returns a list of all tournaments.
 GET /api/tournament/<int:tournament_id>: Returns detailed information about a specific tournament, including its type.
 GET /api/tournament/<int:tournament_id>/standings: Returns tournament standings for a specific tournament. The type of standings (player or combination) will be determined based on the tournament's type.
+GET /api/tournament/<int:tournament_id>/participants: Returns a list of participants (players or combinations) registered for a specific tournament.
+GET /api/tournament/<int:tournament_id>/structure: Returns information about the tournament structure.
+GET /api/tournament/<int:tournament_id>/seedings
 Stadiums:
 
 GET /api/stadiums: Returns a list of all stadiums.
