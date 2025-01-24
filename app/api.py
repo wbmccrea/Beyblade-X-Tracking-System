@@ -1,4 +1,7 @@
-from flask import Flask, jsonify, request
+import threading
+import time
+import json
+from flask import Flask, jsonify, request, Blueprint
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_, or_, case, func, desc, cast, Float
@@ -7,56 +10,15 @@ from sqlalchemy import and_, or_, case, func, desc, cast, Float
 from db import SessionLocal, engine
 
 # Import statistics module
-from statistics import (
-    calculate_player_matches_played,
-    calculate_player_win_percentage,
-    calculate_player_wins,
-    calculate_player_losses,
-    calculate_player_draws,
-    calculate_player_most_common_winning_finish_type,
-    calculate_player_win_streak,
-    calculate_player_loss_streak,
-    calculate_combination_matches_played,
-    calculate_combination_win_percentage,
-    calculate_combination_wins,
-    calculate_combination_draws,
-    calculate_combination_non_loss_percentage,
-    calculate_combination_most_common_winning_finish_type,
-    calculate_combination_burst_rate,
-    calculate_combination_most_common_loss_type,
-    calculate_combination_most_common_opponent,
-    calculate_combination_best_matchups,
-    calculate_combination_worst_matchups,
-    calculate_combination_total_points,
-    calculate_combination_average_points_per_match,
-    calculate_combination_elo_rating,
-    calculate_part_usage_frequency,
-    calculate_part_win_rate,
-    calculate_most_common_combinations_with_part,
-    calculate_part_total_points,
-    calculate_part_average_points_per_match,
-    calculate_matches_played_in_stadium,
-    calculate_win_percentage_by_stadium,
-    calculate_most_common_win_type_by_stadium,
-    calculate_most_common_matchups_in_stadium,
-    calculate_matches_played_in_stadium_class,
-    calculate_win_percentage_by_stadium_class,
-    calculate_most_common_win_type_by_stadium_class,
-    calculate_most_common_matchups_in_stadium_class,
-    calculate_launcher_usage_frequency,
-    calculate_win_percentage_by_launcher,
-    calculate_most_common_win_type_by_launcher_class,
-    calculate_head_to_head_record,
-    calculate_head_to_head_win_percentage,
-    calculate_head_to_head_non_loss_percentage,
-    calculate_finish_type_distribution,
-    calculate_average_match_length,
-    calculate_most_common_matchups,
-    calculate_tournament_standings,
-)
+from statistics import *
+
+from app import publish_mqtt_message, MQTT_TOPIC_PREFIX, client, connected_flag
 
 # Import models
 from models import Player, BeybladeCombination, Tournament, Stadium, StadiumClass, Launcher, LauncherClass, Match, TournamentParticipant
+
+# Define the Blueprint object
+api = Blueprint('api', __name__)
 
 # Create Flask application instance
 app = Flask(__name__)
@@ -72,7 +34,44 @@ def get_players():
             "player_name": player.player_name
         })
     db.close()
-    return jsonify(player_list)
+    players_data = jsonify(player_list)
+    publish_mqtt_message("beyblade/players", players_data)
+    return players_data
+
+@app.route("/api/part/<int:part_id>/usage_frequency")
+def get_part_usage_frequency(part_id):
+    usage_frequency = calculate_part_usage_frequency(part_id)
+    data = jsonify({"usage_frequency": usage_frequency})
+    publish_mqtt_message(f"beyblade/parts/{part_id}/usage_frequency", data)
+    return data
+
+@app.route("/api/part/<int:part_id>/win_rate")
+def get_part_win_rate(part_id):
+    win_rate = calculate_part_win_rate(part_id)
+    data = jsonify({"win_rate": win_rate})
+    publish_mqtt_message(f"beyblade/parts/{part_id}/win_rate", data)
+    return data
+
+@app.route("/api/part/<int:part_id>/most_common_combinations")
+def get_part_most_common_combinations(part_id):
+    common_combinations = calculate_most_common_combinations_with_part(part_id)
+    data = jsonify({"most_common_combinations": common_combinations})
+    publish_mqtt_message(f"beyblade/parts/{part_id}/most_common_combinations", data)
+    return data
+
+@app.route("/api/part/<int:part_id>/total_points")
+def get_part_total_points(part_id):
+    total_points = calculate_part_total_points(part_id)
+    data = jsonify({"total_points": total_points})
+    publish_mqtt_message(f"beyblade/parts/{part_id}/total_points", data)
+    return data
+
+@app.route("/api/part/<int:part_id>/average_points_per_match")
+def get_part_average_points_per_match(part_id):
+    average_points = calculate_part_average_points_per_match(part_id)
+    data = jsonify({"average_points_per_match": average_points})
+    publish_mqtt_message(f"beyblade/parts/{part_id}/average_points_per_match", data)
+    return data
 
 @app.route("/api/player/<int:player_id>")
 def get_player(player_id):
@@ -95,7 +94,9 @@ def get_player(player_id):
         "loss_streak": calculate_player_loss_streak(player_id),
     }
     db.close()
-    return jsonify(stats)
+    player_stats = jsonify(stats)
+    publish_mqtt_message(f"beyblade/players/{player_id}/stats", player_stats)
+    return player_stats
 
 @app.route("/api/combinations")
 def get_combinations():
@@ -108,7 +109,9 @@ def get_combinations():
             "combination_name": combination.combination_name
         })
     db.close()
-    return jsonify(combination_list)
+    combinations_data = jsonify(combination_list)
+    publish_mqtt_message("beyblade/combinations", combinations_data)
+    return combinations_data
 
 
 @app.route("/api/combination/<int:combination_id>")
@@ -136,10 +139,11 @@ def get_combination(combination_id):
         "total_points": calculate_combination_total_points(combination_id),
         "average_points_per_match": calculate_combination_average_points_per_match(combination_id),
         "elo_rating": calculate_combination_elo_rating(combination_id)
-
     }
     db.close()
-    return jsonify(stats)
+    combination_stats = jsonify(stats)
+    publish_mqtt_message(f"beyblade/combinations/{combination_id}/stats", combination_stats)
+    return combination_stats
 
 @app.route("/api/tournaments")
 def get_tournaments():
@@ -155,7 +159,9 @@ def get_tournaments():
             "tournament_type": tournament.tournament_type
         })
     db.close()
-    return jsonify(tournament_list)
+    tournaments_data = jsonify(tournament_list)
+    publish_mqtt_message("beyblade/tournaments", tournaments_data)
+    return tournaments_data
 
 @app.route("/api/tournament/<int:tournament_id>")
 def get_tournament(tournament_id):
@@ -173,13 +179,16 @@ def get_tournament(tournament_id):
         "tournament_type": tournament.tournament_type
     }
     db.close()
-    return jsonify(tournament_data)
+    tournament_data_json = jsonify(tournament_data)
+    publish_mqtt_message(f"beyblade/tournaments/{tournament_id}", tournament_data_json)
+    return tournament_data_json
 
 @app.route("/api/tournament/<int:tournament_id>/standings")
 def get_tournament_standings(tournament_id):
     db = SessionLocal()
     tournament = db.query(Tournament).filter(Tournament.tournament_id == tournament_id).first()
     if not tournament:
+        db.close()
         return jsonify({"error": "Tournament not found"}), 404
 
     participant_type = "Player" if tournament.tournament_type in ("Standard", "PlayerLadder") else "Combination"
@@ -200,14 +209,16 @@ def get_tournament_standings(tournament_id):
         standings_with_names.append(participant_data)
 
     db.close()
-    return jsonify({
+    standings_json = jsonify({
         "tournament_id": tournament_id,
         "tournament_name": tournament.tournament_name,
         "tournament_type": tournament.tournament_type,
         "standings": standings_with_names
     })
+    publish_mqtt_message(f"beyblade/tournaments/{tournament_id}/standings", standings_json)
+    return standings_json
 
-app.route("/api/stadiums")
+@app.route("/api/stadiums")
 def get_stadiums():
     db = SessionLocal()
     stadiums = db.query(Stadium).all()
@@ -219,7 +230,9 @@ def get_stadiums():
             "stadium_class": stadium.stadium_class
         })
     db.close()
-    return jsonify(stadium_list)
+    stadiums_json = jsonify(stadium_list)
+    publish_mqtt_message("beyblade/stadiums", stadiums_json)
+    return stadiums_json
 
 @app.route("/api/stadium/<int:stadium_id>")
 def get_stadium(stadium_id):
@@ -235,7 +248,9 @@ def get_stadium(stadium_id):
         "stadium_class": stadium.stadium_class
     }
     db.close()
-    return jsonify(stadium_data)
+    stadium_json = jsonify(stadium_data)
+    publish_mqtt_message(f"beyblade/stadiums/{stadium_id}", stadium_json)
+    return stadium_json
 
 @app.route("/api/stadium/<int:stadium_id>/matchups/<string:participant_type>")
 def get_stadium_matchups(stadium_id, participant_type):
@@ -247,7 +262,9 @@ def get_stadium_matchups(stadium_id, participant_type):
 
     matchups = calculate_most_common_matchups_in_stadium(stadium_id, participant_type)
     db.close()
-    return jsonify(matchups)
+    matchups_json = jsonify(matchups)
+    publish_mqtt_message(f"beyblade/stadiums/{stadium_id}/matchups/{participant_type}", matchups_json)
+    return matchups_json
 
 @app.route("/api/stadium/<int:stadium_id>/finish_type_distribution")
 def get_stadium_finish_type_distribution(stadium_id):
@@ -259,7 +276,9 @@ def get_stadium_finish_type_distribution(stadium_id):
 
     distribution = calculate_finish_type_distribution("Stadium", stadium_id)
     db.close()
-    return jsonify(distribution)
+    distribution_json = jsonify(distribution)
+    publish_mqtt_message(f"beyblade/stadiums/{stadium_id}/finish_type_distribution",distribution_json)
+    return distribution_json
 
 @app.route("/api/stadium_classes")
 def get_stadium_classes():
@@ -273,7 +292,9 @@ def get_stadium_classes():
             "stadium_class_description": stadium_class.description
         })
     db.close()
-    return jsonify(stadium_class_list)
+    stadium_classes_json = jsonify(stadium_class_list)
+    publish_mqtt_message("beyblade/stadium_classes", stadium_classes_json)
+    return stadium_classes_json
 
 @app.route("/api/stadium_class/<int:stadium_class_id>")
 def get_stadium_class(stadium_class_id):
@@ -289,7 +310,9 @@ def get_stadium_class(stadium_class_id):
         "stadium_class_description": stadium_class.description
     }
     db.close()
-    return jsonify(stadium_class_data)
+    stadium_class_json = jsonify(stadium_class_data)
+    publish_mqtt_message(f"beyblade/stadium_classes/{stadium_class_id}", stadium_class_json)
+    return stadium_class_json
 
 @app.route("/api/stadium_class/<int:stadium_class_id>/matchups/<string:participant_type>")
 def get_stadium_class_matchups(stadium_class_id, participant_type):
@@ -301,7 +324,9 @@ def get_stadium_class_matchups(stadium_class_id, participant_type):
 
     matchups = calculate_most_common_matchups_in_stadium_class(stadium_class_id, participant_type)
     db.close()
-    return jsonify(matchups)
+    matchups_json = jsonify(matchups)
+    publish_mqtt_message(f"beyblade/stadium_classes/{stadium_class_id}/matchups/{participant_type}", matchups_json)
+    return matchups_json
 
 @app.route("/api/stadium_class/<int:stadium_class_id>/finish_type_distribution")
 def get_stadium_class_finish_type_distribution(stadium_class_id):
@@ -313,7 +338,51 @@ def get_stadium_class_finish_type_distribution(stadium_class_id):
 
     distribution = calculate_finish_type_distribution("StadiumClass", stadium_class_id)
     db.close()
-    return jsonify(distribution)
+    distribution_json = jsonify(distribution)
+    publish_mqtt_message(f"beyblade/stadium_classes/{stadium_class_id}/finish_type_distribution", distribution_json)
+    return distribution_json
+
+@app.route("/api/stadium/<int:stadium_id>/matches_played")
+def get_matches_played_in_stadium(stadium_id):
+    matches_played = calculate_matches_played_in_stadium(stadium_id)
+    data_json = jsonify({"matches_played": matches_played})
+    publish_mqtt_message(f"beyblade/stadiums/{stadium_id}/matches_played", data_json)
+    return data_json
+
+@app.route("/api/stadium/<int:stadium_id>/win_percentage/<string:participant_type>")
+def get_win_percentage_by_stadium(stadium_id, participant_type):
+    win_percentage = calculate_win_percentage_by_stadium(stadium_id, participant_type)
+    data_json = jsonify({"win_percentage": win_percentage})
+    publish_mqtt_message(f"beyblade/stadiums/{stadium_id}/win_percentage/{participant_type}", data_json)
+    return data_json
+
+@app.route("/api/stadium/<int:stadium_id>/most_common_win_type")
+def get_most_common_win_type_by_stadium(stadium_id):
+    most_common_win_type = calculate_most_common_win_type_by_stadium(stadium_id)
+    data_json = jsonify({"most_common_win_type": most_common_win_type})
+    publish_mqtt_message(f"beyblade/stadiums/{stadium_id}/most_common_win_type", data_json)
+    return data_json
+
+@app.route("/api/stadium_class/<int:stadium_class_id>/matches_played")
+def get_matches_played_in_stadium_class(stadium_class_id):
+    matches_played = calculate_matches_played_in_stadium_class(stadium_class_id)
+    data_json = jsonify({"matches_played": matches_played})
+    publish_mqtt_message(f"beyblade/stadium_classes/{stadium_class_id}/matches_played", data_json)
+    return data_json
+
+@app.route("/api/stadium_class/<int:stadium_class_id>/win_percentage/<string:participant_type>")
+def get_win_percentage_by_stadium_class(stadium_class_id, participant_type):
+    win_percentage = calculate_win_percentage_by_stadium_class(stadium_class_id, participant_type)
+    data_json = jsonify({"win_percentage": win_percentage})
+    publish_mqtt_message(f"beyblade/stadium_classes/{stadium_class_id}/win_percentage/{participant_type}", data_json)
+    return data_json
+
+@app.route("/api/stadium_class/<int:stadium_class_id>/most_common_win_type")
+def get_most_common_win_type_by_stadium_class(stadium_class_id):
+    most_common_win_type = calculate_most_common_win_type_by_stadium_class(stadium_class_id)
+    data_json = jsonify({"most_common_win_type": most_common_win_type})
+    publish_mqtt_message(f"beyblade/stadium_classes/{stadium_class_id}/most_common_win_type", data_json)
+    return data_json
 
 @app.route("/api/launchers")
 def get_launchers():
@@ -327,7 +396,9 @@ def get_launchers():
             "launcher_class_id": launcher.launcher_class_id
         })
     db.close()
-    return jsonify(launcher_list)
+    launchers_json = jsonify(launcher_list)
+    publish_mqtt_message("beyblade/launchers", launchers_json)
+    return launchers_json
 
 @app.route("/api/launcher/<int:launcher_id>")
 def get_launcher(launcher_id):
@@ -345,7 +416,9 @@ def get_launcher(launcher_id):
         "win_percentage": calculate_win_percentage_by_launcher(launcher_id),
     }
     db.close()
-    return jsonify(stats)
+    launcher_stats_json = jsonify(stats)
+    publish_mqtt_message(f"beyblade/launchers/{launcher_id}/stats", launcher_stats_json)
+    return launcher_stats_json
 
 @app.route("/api/launcher_classes")
 def get_launcher_classes():
@@ -359,7 +432,9 @@ def get_launcher_classes():
             "launcher_class_description": launcher_class.description
         })
     db.close()
-    return jsonify(launcher_class_list)
+    launcher_classes_json = jsonify(launcher_class_list)
+    publish_mqtt_message("beyblade/launcher_classes", launcher_classes_json)
+    return launcher_classes_json
 
 @app.route("/api/launcher_class/<int:launcher_class_id>")
 def get_launcher_class(launcher_class_id):
@@ -376,7 +451,9 @@ def get_launcher_class(launcher_class_id):
         "most_common_win_type": calculate_most_common_win_type_by_launcher_class(launcher_class_id)
     }
     db.close()
-    return jsonify(launcher_class_data)
+    launcher_class_json = jsonify(launcher_class_data)
+    publish_mqtt_message(f"beyblade/launcher_classes/{launcher_class_id}", launcher_class_json)
+    return launcher_class_json
 
 @app.route("/api/match/<int:match_id>")
 def get_match(match_id):
@@ -403,7 +480,9 @@ def get_match(match_id):
         "draw": match.draw
     }
     db.close()
-    return jsonify(match_data)
+    match_json = jsonify(match_data)
+    publish_mqtt_message(f"beyblade/matches/{match_id}", match_json)
+    return match_json
 
 @app.route("/api/tournament/<int:tournament_id>/matches")
 def get_tournament_matches(tournament_id):
@@ -428,46 +507,153 @@ def get_tournament_matches(tournament_id):
             "draw": match.draw
         })
     db.close()
-    return jsonify(match_list)
+    matches_json = jsonify(match_list)
+    publish_mqtt_message(f"beyblade/tournaments/{tournament_id}/matches", matches_json)
+    return matches_json
 
 @app.route("/api/tournament/<int:tournament_id>/average_match_length")
 def get_tournament_average_match_length(tournament_id):
-    db = SessionLocal()
     average_match_length = calculate_average_match_length(tournament_id)
-    db.close()
-    return jsonify({"average_match_length": average_match_length})
+    data_json = jsonify({"average_match_length": average_match_length})
+    publish_mqtt_message(f"beyblade/tournaments/{tournament_id}/average_match_length", data_json)
+    return data_json
 
 @app.route("/api/matchups/<string:participant_type>")
 def get_most_common_matchups(participant_type):
-    db = SessionLocal()
     matchups = calculate_most_common_matchups(participant_type)
-    db.close()
-    return jsonify(matchups)
+    matchups_json = jsonify(matchups)
+    publish_mqtt_message(f"beyblade/matchups/{participant_type}", matchups_json)
+    return matchups_json
 
 @app.route("/api/player/<int:player1_id>/matchup/<int:player2_id>")
 def get_player_matchup(player1_id, player2_id):
-    db = SessionLocal()
     head_to_head = calculate_head_to_head_record(player1_id, player2_id)
     win_percentage = calculate_head_to_head_win_percentage(player1_id, player2_id)
     non_loss_percentage = calculate_head_to_head_non_loss_percentage(player1_id, player2_id)
-    db.close()
-    return jsonify({
+    data = {
         "head_to_head": head_to_head,
         "win_percentage": win_percentage,
         "non_loss_percentage": non_loss_percentage
-    })
+    }
+    data_json = jsonify(data)
+    publish_mqtt_message(f"beyblade/matchups/players/{player1_id}/{player2_id}", data_json)
+    return data_json
 
 @app.route("/api/finish_type_distribution/<string:participant_type>/<int:participant_id>")
 def get_finish_type_distribution(participant_type, participant_id):
-    db = SessionLocal()
     distribution = calculate_finish_type_distribution(participant_type, participant_id)
-    db.close()
-    return jsonify(distribution)
+    distribution_json = jsonify(distribution)
+    publish_mqtt_message(f"beyblade/finish_types/{participant_type}/{participant_id}", distribution_json)
+    return distribution_json
 
 @app.route("/api/finish_type_distribution/stadium/<int:stadium_id>")
 def get_stadium_finish_type_distribution(stadium_id):
-    db = SessionLocal()
     distribution = calculate_finish_type_distribution("Stadium", stadium_id)
-    db.close()
-    return jsonify(distribution)
+    distribution_json = jsonify(distribution)
+    publish_mqtt_message(f"beyblade/finish_types/stadiums/{stadium_id}", distribution_json)
+    return distribution_json
 
+def publish_all_statistics():
+    db = SessionLocal()
+    try:
+        # Players
+        players = db.query(Player).all()
+        for player in players:
+            stats = { # Recreate the stats dictionary from the API endpoint
+                "player_id": player.player_id,
+                "player_name": player.player_name,
+                "matches_played": calculate_player_matches_played(player.player_id),
+                "win_percentage": calculate_player_win_percentage(player.player_id),
+                "wins": calculate_player_wins(player.player_id),
+                "losses": calculate_player_losses(player.player_id),
+                "draws": calculate_player_draws(player.player_id),
+                "most_common_winning_finish_type": calculate_player_most_common_winning_finish_type(player.player_id),
+                "win_streak": calculate_player_win_streak(player.player_id),
+                "loss_streak": calculate_player_loss_streak(player.player_id),
+                "total_points": calculate_player_total_points(player.player_id),
+                "average_points_per_match": calculate_player_average_points_per_match(player.player_id),
+                "elo_rating": calculate_player_elo_rating(player.player_id)
+            }
+            publish_mqtt_message(f"{MQTT_TOPIC_PREFIX}players/{player.player_id}/stats", jsonify(stats))
+
+        # Combinations (Similar structure as Players)
+        combinations = db.query(BeybladeCombination).all()
+        for combination in combinations:
+            stats = {
+                "combination_id": combination.combination_id,
+                "combination_name": combination.combination_name,
+                "matches_played": calculate_combination_matches_played(combination.combination_id),
+                "win_percentage": calculate_combination_win_percentage(combination.combination_id),
+                "wins": calculate_combination_wins(combination.combination_id),
+                "draws": calculate_combination_draws(combination.combination_id),
+                "non_loss_percentage": calculate_combination_non_loss_percentage(combination.combination_id),
+                "most_common_winning_finish_type": calculate_combination_most_common_winning_finish_type(combination.combination_id),
+                "burst_rate": calculate_combination_burst_rate(combination.combination_id),
+                "most_common_loss_type": calculate_combination_most_common_loss_type(combination.combination_id),
+                "most_common_opponent": calculate_combination_most_common_opponent(combination.combination_id),
+                "best_matchups": calculate_combination_best_matchups(combination.combination_id),
+                "worst_matchups": calculate_combination_worst_matchups(combination.combination_id),
+                "total_points": calculate_combination_total_points(combination.combination_id),
+                "average_points_per_match": calculate_combination_average_points_per_match(combination.combination_id),
+                "elo_rating": calculate_combination_elo_rating(combination.combination_id)
+            }
+            publish_mqtt_message(f"{MQTT_TOPIC_PREFIX}combinations/{combination.combination_id}/stats", jsonify(stats))
+
+        #Stadiums
+        stadiums = db.query(Stadium).all()
+        for stadium in stadiums:
+            data = {
+                "matches_played": calculate_matches_played_in_stadium(stadium.stadium_id),
+                "win_percentage_players": calculate_win_percentage_by_stadium(stadium.stadium_id, "Player"),
+                "win_percentage_combinations": calculate_win_percentage_by_stadium(stadium.stadium_id, "Combination"),
+                "most_common_win_type": calculate_most_common_win_type_by_stadium(stadium.stadium_id)
+            }
+            publish_mqtt_message(f"{MQTT_TOPIC_PREFIX}stadiums/{stadium.stadium_id}/stats", jsonify(data))
+        
+        #Stadium Classes
+        stadium_classes = db.query(StadiumClass).all()
+        for stadium_class in stadium_classes:
+            data = {
+                "matches_played": calculate_matches_played_in_stadium_class(stadium_class.id),
+                "win_percentage_players": calculate_win_percentage_by_stadium_class(stadium_class.id, "Player"),
+                "win_percentage_combinations": calculate_win_percentage_by_stadium_class(stadium_class.id, "Combination"),
+                "most_common_win_type": calculate_most_common_win_type_by_stadium_class(stadium_class.id)
+            }
+            publish_mqtt_message(f"{MQTT_TOPIC_PREFIX}stadium_classes/{stadium_class.id}/stats", jsonify(data))
+
+        #Launchers
+        launchers = db.query(Launcher).all()
+        for launcher in launchers:
+            data = {
+                "usage_frequency": calculate_launcher_usage_frequency(launcher.launcher_id),
+                "win_percentage": calculate_win_percentage_by_launcher(launcher.launcher_id)
+            }
+            publish_mqtt_message(f"{MQTT_TOPIC_PREFIX}launchers/{launcher.launcher_id}/stats", jsonify(data))
+
+        #Launcher Classes
+        launcher_classes = db.query(LauncherClass).all()
+        for launcher_class in launcher_classes:
+            data = {
+                "most_common_win_type": calculate_most_common_win_type_by_launcher_class(launcher_class.id)
+            }
+            publish_mqtt_message(f"{MQTT_TOPIC_PREFIX}launcher_classes/{launcher_class.id}/stats", jsonify(data))
+
+    except Exception as e:
+        logger.error(f"Error publishing statistics: {e}")
+    finally:
+        db.close()
+
+def run_statistics_loop():
+    while True:
+        if client and connected_flag:
+            logger.info("Publishing statistics...")
+            publish_all_statistics()
+            logger.info("Statistics published.")
+        else:
+            logger.error("MQTT Client not connected, skipping statistics publishing")
+        time.sleep(15 * 60)  # Sleep for 15 minutes
+
+def start_statistics_thread():
+    statistics_thread = threading.Thread(target=run_statistics_loop)
+    statistics_thread.daemon = True  # Allow the main program to exit even if the thread is running
+    statistics_thread.start()

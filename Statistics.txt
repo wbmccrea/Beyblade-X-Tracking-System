@@ -107,7 +107,6 @@ Most Common Matchups in Stadium Class (across all Stadiums of this class)
 VI. Launcher Statistics:
 
 
-
 Usage Frequency
 
 Win Percentage (for each Launcher/Launcher Class)

@@ -14,6 +14,8 @@ import json
 import time
 import threading
 from decimal import Decimal
+from api import api
+from api import publish_all_statistics
 
 MQTT_DISCOVERY_PREFIX = "homeassistant"  # Standard Home Assistant discovery prefix
 
@@ -25,6 +27,7 @@ logger = logging.getLogger(__name__) #get a logger object
 
 
 app = Flask(__name__)
+app.register_blueprint(api, url_prefix='/api')
 
 #Database info
 DB_HOST = os.environ.get("DB_HOST")
@@ -37,7 +40,7 @@ MQTT_BROKER = os.environ.get("MQTT_BROKER")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", 1883))
 MQTT_USER = os.environ.get("MQTT_USER")
 MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD")
-MQTT_TOPIC_PREFIX = "beyblade/stats/"
+MQTT_TOPIC_PREFIX = os.environ.get("MQTT_TOPIC_PREFIX", "beyblade/stats/")  # Set a default value
 
 def get_db_connection():
     try:
@@ -92,6 +95,34 @@ def mqtt_loop():
         if client:
             client.loop(timeout=0.1)  # Process MQTT events with a timeout
         time.sleep(0.01)   
+
+def publish_mqtt_message(topic, payload):
+    global client  # Use the global client variable
+    if client and connected_flag:  # Check if client is connected and connection flag is set
+        try:
+            client.publish(topic, json.dumps(payload))
+            logger.info(f"Published to topic: {topic}")
+        except Exception as e:
+            logger.error(f"Error publishing to MQTT: {e}")
+    else:
+        logger.error("MQTT client is not connected or connection flag is not set. Cannot publish message.")
+
+def run_statistics_loop():
+    while True:
+        if client and connected_flag:
+            logger.info("Publishing statistics...")
+            publish_all_statistics()
+            logger.info("Statistics published.")
+        else:
+            logger.error("MQTT Client not connected, skipping statistics publishing")
+        time.sleep(15 * 60)  # Sleep for 15 minutes
+
+def start_statistics_thread():
+    statistics_thread = threading.Thread(target=run_statistics_loop)
+    statistics_thread.daemon = True
+    statistics_thread.start()
+
+start_statistics_thread() # Start the statistics publishing thread
 
 def publish_stats():
     global connected_flag
@@ -273,38 +304,6 @@ def publish_stats():
 
     except Exception as e:
         logger.error(f"Error publishing stats to MQTT: {e}")
-
-def publish_mqtt_message(client, stat_type, json_data):
-    topic = MQTT_TOPIC_PREFIX + stat_type
-    #logger.info(f"Publishing to topic: {topic}")
-    ret = client.publish(topic, json_data)
-    if ret[0] == 0:
-        logger.info(f"Publish successful for {stat_type}")
-    else:
-        logger.error(f"Publish failed for {stat_type}: {ret}")
-
-def publish_discovery_config(client, player_stats, combination_stats):
-    """Publishes MQTT discovery messages for Home Assistant."""
-
-    for stat_type, data in [("player_stats", player_stats), ("combination_stats", combination_stats)]:
-        for item in data:
-            name = item["name"]
-            for stat_name, value in item.items():
-                if stat_name == "name":
-                    continue
-
-                config = {
-                    "name": f"{name} {stat_name.replace('_', ' ').title()}",
-                    "state_topic": f"{MQTT_TOPIC_PREFIX}{stat_type}",
-                    "value_template": f"{{{{ value_json[{data.index(item)}].{stat_name} }}}}", # Corrected value_template
-                    "unit_of_measurement": "%" if stat_name in ["win_rate", "non_loss_rate"] else None,
-                    "json_attributes_topic": f"{MQTT_TOPIC_PREFIX}{stat_type}",
-                    "unique_id": f"{stat_type}_{name}_{stat_name}",
-                }
-
-                discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/sensor/{MQTT_TOPIC_PREFIX.replace('/', '_')}{stat_type.replace('/', '_')}/{name}_{stat_name}/config"
-                client.publish(discovery_topic, json.dumps(config), retain=True)
-                #logger.info(f"Published discovery config to {discovery_topic}")
 
 @app.before_request
 def before_request():
