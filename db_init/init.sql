@@ -4,13 +4,13 @@ CREATE DATABASE IF NOT EXISTS beyblade_db;
 -- Use the database
 USE beyblade_db;
 
--- Create the Players table
+-- Players table (No changes)
 CREATE TABLE IF NOT EXISTS Players (
     player_id INT AUTO_INCREMENT PRIMARY KEY,
     player_name VARCHAR(255) UNIQUE
 );
 
--- Create the Blades table
+-- Blades table (No changes)
 CREATE TABLE IF NOT EXISTS Blades (
     blade_id INT AUTO_INCREMENT PRIMARY KEY,
     blade_name VARCHAR(255) UNIQUE,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS Blades (
     blade_weight DECIMAL(4, 1) DEFAULT NULL
 );
 
--- Create the Ratchets table
+-- Ratchets table (No changes)
 CREATE TABLE IF NOT EXISTS Ratchets (
     ratchet_id INT AUTO_INCREMENT PRIMARY KEY,
     ratchet_name VARCHAR(255) UNIQUE,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS Ratchets (
     ratchet_weight DECIMAL(4, 1) DEFAULT NULL
 );
 
--- Create the Bits table (with bit_type)
+-- Bits table (No changes)
 CREATE TABLE IF NOT EXISTS Bits (
     bit_id INT AUTO_INCREMENT PRIMARY KEY,
     bit_name VARCHAR(255) UNIQUE,
@@ -38,41 +38,38 @@ CREATE TABLE IF NOT EXISTS Bits (
     bit_type ENUM('Attack', 'Defense', 'Stamina', 'Balance', 'Unknown') DEFAULT 'Unknown'
 );
 
--- Drop the Stats table (no longer needed)
-DROP TABLE IF EXISTS Stats;
-
--- Create the BitStats table (simplified, bit_id is primary key)
+-- BitStats table (No changes)
 CREATE TABLE IF NOT EXISTS BitStats (
     bit_id INT PRIMARY KEY,
-    attack DECIMAL(5, 2) DEFAULT NULL,
-    defense DECIMAL(5, 2) DEFAULT NULL,
-    stamina DECIMAL(5, 2) DEFAULT NULL,
-    dash DECIMAL(5, 2) DEFAULT NULL,
-    burst_resistance DECIMAL(5, 2) DEFAULT NULL,
+    attack INT DEFAULT 0,
+    defense INT DEFAULT 0,
+    stamina INT DEFAULT 0,
+    dash INT DEFAULT 0,
+    burst_resistance INT DEFAULT 0,
     FOREIGN KEY (bit_id) REFERENCES Bits(bit_id)
 );
 
--- Create the BladeStats table (simplified, bit_id is primary key)
+-- BladeStats table (No changes)
 CREATE TABLE IF NOT EXISTS BladeStats (
     blade_id INT PRIMARY KEY,
-    attack DECIMAL(5, 2) DEFAULT NULL,
-    defense DECIMAL(5, 2) DEFAULT NULL,
-    stamina DECIMAL(5, 2) DEFAULT NULL,
-    weight DECIMAL(5, 2) DEFAULT NULL,
+    attack INT DEFAULT 0,
+    defense INT DEFAULT 0,
+    stamina INT DEFAULT 0,
+    weight DECIMAL(4, 1) DEFAULT NULL,
     FOREIGN KEY (blade_id) REFERENCES Blades(blade_id)
 );
 
--- Create the RatchetStats table (simplified, bit_id is primary key)
+-- RatchetStats table (No changes)
 CREATE TABLE IF NOT EXISTS RatchetStats (
     ratchet_id INT PRIMARY KEY,
-    attack DECIMAL(5, 2) DEFAULT NULL,
-    defense DECIMAL(5, 2) DEFAULT NULL,
-    stamina DECIMAL(5, 2) DEFAULT NULL,
-    click_strength DECIMAL(5, 2) DEFAULT NULL,
+    attack INT DEFAULT 0,
+    defense INT DEFAULT 0,
+    stamina INT DEFAULT 0,
+    height int DEFAULT 0,
     FOREIGN KEY (ratchet_id) REFERENCES Ratchets(ratchet_id)
 );
 
--- Create the BladeAliases table
+-- BladeAliases table (No changes)
 CREATE TABLE IF NOT EXISTS BladeAliases (
     alias_id INT AUTO_INCREMENT PRIMARY KEY,
     blade_id INT,
@@ -80,7 +77,7 @@ CREATE TABLE IF NOT EXISTS BladeAliases (
     FOREIGN KEY (blade_id) REFERENCES Blades(blade_id)
 );
 
--- Create the BeybladeCombinations table
+-- BeybladeCombinations table (No changes)
 CREATE TABLE IF NOT EXISTS BeybladeCombinations (
     combination_id INT AUTO_INCREMENT PRIMARY KEY,
     blade_id INT,
@@ -94,21 +91,39 @@ CREATE TABLE IF NOT EXISTS BeybladeCombinations (
     FOREIGN KEY (bit_id) REFERENCES Bits(bit_id)
 );
 
--- Create the LauncherTypes table
-CREATE TABLE IF NOT EXISTS LauncherTypes (
+-- Launchers table (renamed from LauncherTypes, added launcher_class_id)
+CREATE TABLE IF NOT EXISTS Launchers (
     launcher_id INT AUTO_INCREMENT PRIMARY KEY,
-    launcher_name VARCHAR(255) UNIQUE
+    launcher_name VARCHAR(255) UNIQUE,
+    launcher_class_id INT,
+    FOREIGN KEY (launcher_class_id) REFERENCES LauncherClasses(id)
 );
 
--- Create the Tournaments table
+-- LauncherClasses table
+CREATE TABLE IF NOT EXISTS LauncherClasses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) UNIQUE,
+    description VARCHAR(255)
+);
+
+-- LauncherClass_spin_compatibility table
+CREATE TABLE IF NOT EXISTS LauncherClass_spin_compatibility (
+    launcher_class_id INT,
+    spin_direction ENUM('Right-Spin', 'Left-Spin', 'Dual-Spin'),
+    FOREIGN KEY (launcher_class_id) REFERENCES LauncherClasses(id),
+    PRIMARY KEY (launcher_class_id, spin_direction)
+);
+
+-- Tournaments table (added tournament_type)
 CREATE TABLE IF NOT EXISTS Tournaments (
     tournament_id INT AUTO_INCREMENT PRIMARY KEY,
     tournament_name VARCHAR(255),
     start_date TIMESTAMP,
-    end_date TIMESTAMP
+    end_date TIMESTAMP,
+    tournament_type ENUM('Standard', 'PlayerLadder', 'CombinationLadder') DEFAULT 'Standard'
 );
 
--- Create the Matches table (with the 'draw' column)
+-- Matches table (added start_time, renamed match_time to end_time)
 CREATE TABLE IF NOT EXISTS Matches (
     match_id INT AUTO_INCREMENT PRIMARY KEY,
     tournament_id INT,
@@ -118,19 +133,42 @@ CREATE TABLE IF NOT EXISTS Matches (
     player2_combination_id INT,
     player1_launcher_id INT,
     player2_launcher_id INT,
+    stadium_id INT,
     winner_id INT,
     finish_type ENUM('Draw', 'Survivor', 'KO', 'Burst', 'Extreme'),
-    match_time TIMESTAMP,
-    draw TINYINT(1) DEFAULT 0,  -- Added 'draw' column with default value
+    end_time TIMESTAMP,
+    draw TINYINT(1) DEFAULT 0,
+    start_time TIMESTAMP NULL,
     FOREIGN KEY (tournament_id) REFERENCES Tournaments(tournament_id),
     FOREIGN KEY (player1_id) REFERENCES Players(player_id),
     FOREIGN KEY (player2_id) REFERENCES Players(player_id),
     FOREIGN KEY (player1_combination_id) REFERENCES BeybladeCombinations(combination_id),
     FOREIGN KEY (player2_combination_id) REFERENCES BeybladeCombinations(combination_id),
-    FOREIGN KEY (player1_launcher_id) REFERENCES LauncherTypes(launcher_id),
-    FOREIGN KEY (player2_launcher_id) REFERENCES LauncherTypes(launcher_id),
-    FOREIGN KEY (winner_id) REFERENCES Players(player_id)
+    FOREIGN KEY (player1_launcher_id) REFERENCES Launchers(launcher_id),
+    FOREIGN KEY (player2_launcher_id) REFERENCES Launchers(launcher_id),
+    FOREIGN KEY (winner_id) REFERENCES Players(player_id),
+    FOREIGN KEY (stadium_id) REFERENCES Stadiums(stadium_id)
 );
 
-GRANT ALL PRIVILEGES ON beyblade_db.* TO 'beyblade_user'@'%' IDENTIFIED BY 'Sample_DB_Password'; # For your app
+-- TournamentParticipant table (updated for Player/Combination participation & ELO)
+CREATE TABLE IF NOT EXISTS TournamentParticipant (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tournament_id INT,
+    player_id INT,
+    combination_id INT,
+    participant_type ENUM('Player', 'Combination'),
+    seed INT,
+    elo_rating INT DEFAULT 1000,  -- Default ELO rating
+    wins INT DEFAULT 0,
+    losses INT DEFAULT 0,
+    FOREIGN KEY (tournament_id) REFERENCES Tournaments(tournament_id),
+    FOREIGN KEY (player_id) REFERENCES Players(player_id),
+    FOREIGN KEY (combination_id) REFERENCES BeybladeCombinations(combination_id),
+    CONSTRAINT chk_participant_type CHECK (
+        (participant_type = 'Player' AND combination_id IS NULL AND player_id IS NOT NULL) OR 
+        (participant_type = 'Combination' AND player_id IS NULL AND combination_id IS NOT NULL)
+    )
+);
+
+GRANT ALL PRIVILEGES ON beyblade_db.* TO 'beyblade_user'@'%' IDENTIFIED BY 'Sample_DB_Password';
 FLUSH PRIVILEGES;
